@@ -212,7 +212,42 @@ W2 的到达率：<填写>
 | O1 内存与 GC | <未做 / 预测、`runs/` 目录、结论> |
 | O2 网络 | <未做 / 两台主机的规格与拓扑、`runs/` 或日志、结论> |
 | O3 告警与看板 | <未做 / 规则文件、触发记录、看板说明> |
-| O4 迁移到小组项目 | <未做 / 仓库链接、测了哪个资源、结论> |
+| O4 迁移到小组项目 | 已完成：PaperMate 加入 RED 并测量连接池上限；单连接池最高已测达标目标 325/s，四连接池 458/s。见下方 7.1 节、[完整 O4 报告](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/docs/O4.md)及[PR #96](https://github.com/li-yuelang/SE26Project-05/pull/96)。 |
+
+### 7.1 O4：将 RED 与容量测量迁移到 PaperMate
+
+**项目与版本：** [小组项目 SE26Project-05](https://github.com/li-yuelang/SE26Project-05)；[项目 PR #96](https://github.com/li-yuelang/SE26Project-05/pull/96) 已 squash 合并，合并提交为 [`add6a84f7a402d79f899779dbc4746d2fdcd52ed`](https://github.com/li-yuelang/SE26Project-05/commit/add6a84f7a402d79f899779dbc4746d2fdcd52ed)。以下报告和数据链接均固定到该提交，避免后续 main 更新改变评分依据。[完整 O4 报告](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/docs/O4.md)，以及[全部 O4 原始证据](https://github.com/li-yuelang/SE26Project-05/tree/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/)。
+
+**对象与方法：** 为真实 FastAPI 后端加入 RED 三项指标，压测 `GET /api/papers/discover?page=1&page_size=20`，保留 Bearer 认证和真实 PostgreSQL 查询；使用固定 1,000 条模拟论文、不调用大模型/arXiv、不添加人工延迟。主机为 4 vCPU/8 GiB，4 vCPU 对应两个物理核的 SMT；API 单 worker 绑 2,3，数据库、Go 压测器及监控绑 0,1。泊松开环到达，每阶段 30 秒；池 max_overflow=0、获取超时 0.5 秒，对比 pool_size=1 与 4。O4 自定目标为“成功率至少 99%，成功请求客户端 p99 不超过 200 ms”，与必做读路径的 50 ms 阈值分别记录。
+
+**RED 迁移：** R 用 `papermate_http_requests_total{method,route,code}` 的 rate；E 用 5xx/全部请求；D 用 `papermate_http_request_duration_seconds` 直方图查询平均值和 p99，另有在途请求指标。标签使用路由模板，不包含论文 ID、查询参数或 Token。实现见 [HTTP 埋点](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/backend/app/core/metrics.py)、[连接池埋点](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/backend/app/core/db_metrics.py) 和 [PromQL 查询文件](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/deploy/o4/queries-red.txt)；抓取配置位于 [prometheus.yml](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/deploy/o4/prometheus.yml)。
+
+**结果摘要（原始客户端 CSV）：**
+
+| 池大小 | 目标到达率（请求/秒） | 成功吞吐（请求/秒） | 错误率 | 客户端 p99（ms） | 数据出处 |
+|---:|---:|---:|---:|---:|---|
+| 1 | 325 | 327.4 | 0.00% | 173.84 | [r1-refine-pool1-01 阶段 2](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/r1-refine-pool1-01/steps.csv) |
+| 1 | 340 | 339.8 | 0.03% | 316.72 | [r1-refine-pool1-01 阶段 3](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/r1-refine-pool1-01/steps.csv) |
+| 1 | 353 | 335.1 | 6.25% | 503.82 | [r1-go-pool1-01 阶段 3](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/r1-go-pool1-01/steps.csv) |
+| 4 | 353 | 356.2 | 0.00% | 50.39 | [r2-go-pool4-01 阶段 2](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/r2-go-pool4-01/steps.csv) |
+| 4 | 458 | 457.0 | 0.01% | 144.14 | [r2-go-pool4-01 阶段 3](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/r2-go-pool4-01/steps.csv) |
+| 4 | 599 | 322.8 | 46.43% | 570.68 | [r2-go-pool4-01 阶段 4](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/r2-go-pool4-01/steps.csv) |
+
+单连接池最高已测达标目标点为 **325 请求/秒**；340 请求/秒时 p99 已超过 200 ms，达标边界落在 325～340 目标请求/秒之间，不能把 325 当精确长期容量。池扩大为 4 后，最高已测达标目标点为 **458 请求/秒**，比 325 提高约 41%；继续加压至 599/s 不达标。353/s 时池从 1 扩到 4，错误率从 6.25% 降为 0、p99 从 503.82 ms 降为 50.39 ms，支持单连接池为初始瓶颈。R1 的 599/s 阶段成功返回不足一半，原计划的 740/s 阶段被工具自动停止。
+
+**按 L-07 第 25 页格式的一行资源账：**
+
+| 资源 | 峰值需求 | 容量 | 利用率 | 饱和观测项 |
+|---|---|---|---|---|
+| 单 worker 的 SQLAlchemy 连接池，P=1 | R1 已测最高目标 599/s × 低负载持有时间 H=2.6927 ms ≈ 1.613 个连接的理想占用需求 | 1 个连接；P/H 近似 371/s；实测约 340～353 目标/s 时明显排队/超时，最高已测达标目标 325/s | 599/s 阶段平均占用 1.0/1=100%；模型需求/容量约 161%，两者不同 | 平均获取中调用约 297.5 个；503 为 12215/18062；客户端 p99 567.27 ms；扩大池后同负载改善 |
+
+资源账的 H 来自 [Go 低负载基线 server.json 阶段 2](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/b2-go-pool1-01/server.json)；占用与获取中调用来自 [R1 server.json 阶段 5](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/r1-go-pool1-01/server.json)；503 次数、请求数与客户端 p99 来自 [R1 steps.csv 阶段 5](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/r1-go-pool1-01/steps.csv)。其中 `acquiring` 包括排队、建连和 pre-ping，不能称为纯等待者；H 是 checkout 到 checkin 的时间，简单 P/H 未包括 checkout 前的槽位预留开销，只是近似。
+
+**预测与实测：** 低负载 CPU 为 2.8360 ms/request，初步估计 CPU 上限 352.6/s、池上限 371.4/s，原预测 CPU 略早达到上限；实测先出现单连接池瓶颈，原预测未修改。在未过载的 247/s 阶段每请求 CPU 已降至 2.0872 ms，低负载外推偏保守；请求开销随负载变化、连接预留与泊松突发也影响边界。R2 前据该阶段重新预测 CPU 约 479.1/s，实测四连接池在 599/s 时 API CPU 约 0.996 核，扩大池无法带来四倍吞吐，CPU 饱和与池等待可以同时存在。事前预测文件：[R1](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/PREDICTION-R1.json)、[R2](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/PREDICTION-R2.json)、[临界点补测](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/PREDICTION-R1-REFINE.json)。
+
+**证据口径与复现：** 每次实验目录保留 `meta.json`、`steps.csv`、`server.csv/json`、`prometheus-step-*.json`（完整查询与响应）、原始 metrics、vmstat/mpstat/iostat/pidstat 日志和 SHA256 清单。89 个原始证据文件在项目提交后再次验证哈希一致；测量时源码快照按文本展开保存在[measured-source](https://github.com/li-yuelang/SE26Project-05/tree/add6a84f7a402d79f899779dbc4746d2fdcd52ed/runs/o4/measured-source/)，不是声称当时已经存在本次合并提交。测试数据和复现工具见 [seed_o4.py](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/backend/scripts/seed_o4.py)、[o4_go_run.py](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/backend/scripts/o4_go_run.py) 与 [完整 O4 报告](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/docs/O4.md)。原始 O4 数据保留在小组项目的固定提交中，以上链接可直接追溯；本实验仓库的必做数据继续使用本仓库 `runs/`。
+
+客户端按计划发送时刻到响应体读完计时，只统计成功请求；服务端为中间件入口到最后响应体发送，p99 采用直方图插值。客户端 CSV 是整段，服务端查询剔除首 5 秒和末 1 秒，因此过载时数值不能逐项等同；宽桶也会影响服务端 p99。以上结论限于该主机、单 worker、固定数据和短阶段测量，不代表完整项目的 LLM、Celery 或抓取性能。组员准备现场复现时可在同一主机使用报告中的 O4 独立服务与参数，不与必做实验同时压测。
 
 ## 8. 成员分工
 
