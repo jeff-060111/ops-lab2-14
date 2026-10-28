@@ -1,0 +1,24 @@
+File: enrolld
+Build ID: cc0490a56f90dbdd0e7485fa8d3788d1c15a001e
+Type: cpu
+Time: 2026-10-28 20:45:56 CST
+Duration: 20s, Total samples = 2.97s (14.85%)
+Showing nodes accounting for 2.78s, 93.60% of 2.97s total
+Dropped 42 nodes (cum <= 0.01s)
+Showing top 15 nodes out of 67
+      flat  flat%   sum%        cum   cum%
+     2.49s 83.84% 83.84%      2.49s 83.84%  main.spin (inline)
+     0.16s  5.39% 89.23%      0.16s  5.39%  internal/runtime/syscall/linux.Syscall6
+     0.06s  2.02% 91.25%      0.06s  2.02%  runtime.futex
+     0.03s  1.01% 92.26%      0.04s  1.35%  encoding/json.appendString[go.shape.string]
+     0.01s  0.34% 92.59%      0.06s  2.02%  bufio.(*Reader).fill
+     0.01s  0.34% 92.93%      2.82s 94.95%  net/http.(*conn).serve
+     0.01s  0.34% 93.27%      0.07s  2.36%  runtime.netpoll
+     0.01s  0.34% 93.60%      0.05s  1.68%  syscall.Read (inline)
+         0     0% 93.60%      0.06s  2.02%  bufio.(*Reader).Peek
+         0     0% 93.60%      0.13s  4.38%  bufio.(*Writer).Flush
+         0     0% 93.60%      0.02s  0.67%  context.WithCancel
+         0     0% 93.60%      0.04s  1.35%  encoding/json.(*Encoder).Encode
+         0     0% 93.60%      0.04s  1.35%  encoding/json.(*encodeState).marshal
+         0     0% 93.60%      0.04s  1.35%  encoding/json.(*encodeState).reflectValue
+         0     0% 93.60%      0.02s  0.67%  encoding/json.arrayEncoder.encode
