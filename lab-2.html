@@ -1,0 +1,1816 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="generator" content="build_guide_html.py">
+  <title>实验 2：测出上限，看见饱和</title>
+  <meta name="description" content="互联网产品开发与运维（2026 秋季） · 实验 2：测出上限，看见饱和">
+  <style>
+    :root {
+      --ground: #F4F6F8;
+      --surface: #FFFFFF;
+      --surface-2: #EDF1F5;
+      --code-bg: #F0F3F7;
+      --ink: #1B2530;
+      --ink-2: #4A5866;
+      --muted: #6B7885;
+      --rule: #D8DEE5;
+      --rule-strong: #B9C3CE;
+      --accent: #2251C9;
+      --accent-ink: #1B41A3;
+      --accent-soft: #E8EEFB;
+      --amber: #B8681A;
+      --amber-soft: #FBF1E4;
+      --red: #C23B32;
+      --red-soft: #FBE9E7;
+      --green: #2E8B57;
+      --green-soft: #E6F3EC;
+      --on-accent: #fff;
+      --on-green: #fff;
+      --serif: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+      --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", Helvetica, Arial, sans-serif;
+      --mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", "Noto Sans Mono CJK SC", monospace;
+      color-scheme: light;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ground: #0E1319;
+        --surface: #151B23;
+        --surface-2: #1B222C;
+        --code-bg: #10161D;
+        --ink: #E7ECF1;
+        --ink-2: #B4BFCA;
+        --muted: #8C98A4;
+        --rule: #2B3541;
+        --rule-strong: #3D4956;
+        --accent: #7FA3FF;
+        --accent-ink: #A9C1FF;
+        --accent-soft: #1B2740;
+        --amber: #E5A35A;
+        --amber-soft: #2E2416;
+        --red: #F07A70;
+        --red-soft: #3A1F1D;
+        --green: #5CC28A;
+        --green-soft: #16281E;
+        --on-accent: #0E1319;
+        --on-green: #0E1319;
+        color-scheme: dark;
+      }
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      scroll-padding-top: 20px
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      html {
+        scroll-behavior: smooth
+      }
+    }
+
+    body {
+      margin: 0;
+      background: var(--ground);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.75
+    }
+
+    a {
+      color: var(--accent-ink);
+      text-decoration-color: var(--rule-strong);
+      text-underline-offset: 3px;
+      overflow-wrap: anywhere
+    }
+
+    a:hover {
+      text-decoration-color: var(--accent)
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px
+    }
+
+    .skip {
+      position: absolute;
+      left: -999px;
+      top: 8px;
+      background: var(--accent);
+      color: var(--on-accent);
+      padding: 6px 12px;
+      z-index: 10
+    }
+
+    .skip:focus {
+      left: 8px
+    }
+
+    strong {
+      font-weight: 600
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: .9em;
+      background: var(--surface-2);
+      border: 1px solid var(--rule);
+      border-radius: 3px;
+      padding: 0 .3em;
+      overflow-wrap: break-word
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+      overflow-wrap: normal
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 20px
+    }
+
+    /* ---------- masthead ---------- */
+    .masthead {
+      padding: 40px 0 26px;
+      border-bottom: 1px solid var(--rule);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px
+    }
+
+    .eyebrow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: .04em
+    }
+
+    .eyebrow .tag {
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 2px 8px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 3px;
+      color: var(--ink-2)
+    }
+
+    .masthead h1 {
+      font-family: var(--serif);
+      font-weight: 700;
+      line-height: 1.3;
+      font-size: clamp(28px, 5.4vw, 42px);
+      margin: 0;
+      text-wrap: balance
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+      margin: 0;
+      max-width: 880px
+    }
+
+    .meta div {
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      padding: 10px 14px
+    }
+
+    .meta dt {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: .06em
+    }
+
+    .meta dd {
+      margin: 2px 0 0;
+      font-size: 15px;
+      font-weight: 500
+    }
+
+    .meta dd.num {
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--accent-ink)
+    }
+
+    /* ---------- layout ---------- */
+    .layout {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 56px;
+      align-items: start;
+      padding-top: 28px
+    }
+
+    main {
+      min-width: 0;
+      max-width: 780px;
+      padding-bottom: 72px
+    }
+
+    @media (max-width:979px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+        padding-top: 16px
+      }
+
+      main {
+        max-width: none
+      }
+    }
+
+    /* ---------- table of contents ---------- */
+    .toc-wrap {
+      position: sticky;
+      top: 16px;
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+      font-size: 14px;
+      padding-right: 4px
+    }
+
+    .toc-wrap summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--ink-2);
+      padding: 4px 0;
+      list-style: none;
+      letter-spacing: .06em
+    }
+
+    .toc-wrap summary::-webkit-details-marker {
+      display: none
+    }
+
+    .toc-wrap summary::after {
+      content: "▾";
+      margin-left: 6px;
+      color: var(--muted)
+    }
+
+    .toc-wrap:not([open]) summary::after {
+      content: "▸"
+    }
+
+    .toc ol {
+      list-style: none;
+      margin: 6px 0 0;
+      padding: 0
+    }
+
+    .toc li {
+      margin: 0
+    }
+
+    .toc a {
+      display: block;
+      text-decoration: none;
+      color: var(--ink-2);
+      padding: 3px 10px;
+      border-left: 2px solid var(--rule);
+      line-height: 1.5
+    }
+
+    .toc a:hover {
+      color: var(--ink);
+      border-left-color: var(--rule-strong)
+    }
+
+    .toc a.active {
+      color: var(--accent-ink);
+      border-left-color: var(--accent);
+      background: var(--accent-soft);
+      font-weight: 500
+    }
+
+    .toc ol ol a {
+      padding-left: 24px;
+      font-size: 13px
+    }
+
+    .toc .n {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      margin-right: 6px
+    }
+
+    @media (max-width:979px) {
+      .toc-wrap {
+        position: static;
+        max-height: none;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        padding: 10px 14px;
+        margin-bottom: 8px
+      }
+    }
+
+    /* ---------- prose ---------- */
+    h2,
+    h3 {
+      font-family: var(--serif);
+      font-weight: 700;
+      line-height: 1.35;
+      text-wrap: balance;
+      position: relative
+    }
+
+    h2 {
+      font-size: 25px;
+      margin: 60px 0 18px;
+      padding-top: 26px;
+      border-top: 1px solid var(--rule)
+    }
+
+    main>h2:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none
+    }
+
+    h3 {
+      font-size: 19.5px;
+      margin: 42px 0 14px
+    }
+
+    h2 .sec-num {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--accent-ink);
+      background: var(--accent-soft);
+      border-radius: 3px;
+      padding: 2px 8px;
+      margin-right: 12px;
+      vertical-align: 3px
+    }
+
+    h3 .badge {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      border: 1px solid var(--rule-strong);
+      border-radius: 999px;
+      padding: 1px 9px;
+      margin-left: 10px;
+      white-space: nowrap;
+      vertical-align: 2px
+    }
+
+    .anchor {
+      position: absolute;
+      left: -1.1em;
+      color: var(--rule-strong);
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: .8em;
+      opacity: 0
+    }
+
+    h2:hover .anchor,
+    h3:hover .anchor,
+    .anchor:focus {
+      opacity: 1
+    }
+
+    @media (max-width:979px) {
+      .anchor {
+        display: none
+      }
+    }
+
+    p {
+      margin: 0 0 14px
+    }
+
+    ul,
+    ol {
+      margin: 0 0 14px;
+      padding-left: 1.45em
+    }
+
+    li {
+      margin: 4px 0
+    }
+
+    li>p {
+      margin: 0 0 8px
+    }
+
+    li>ul,
+    li>ol {
+      margin: 6px 0 4px
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid var(--rule);
+      margin: 28px 0
+    }
+
+    /* ---------- tables ---------- */
+    .tablewrap {
+      overflow-x: auto;
+      border: 1px solid var(--rule);
+      background: var(--surface);
+      margin: 0 0 18px
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 14.5px;
+      line-height: 1.6
+    }
+
+    th,
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--rule);
+      text-align: left;
+      vertical-align: top
+    }
+
+    th {
+      font-weight: 500;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: .03em;
+      background: var(--surface-2);
+      white-space: nowrap
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none
+    }
+
+    td.nw {
+      white-space: nowrap
+    }
+
+    table.wide-first th:first-child,
+    table.wide-first td:first-child {
+      width: 34%
+    }
+
+    /* ---------- code ---------- */
+    figure.code {
+      margin: 0 0 18px;
+      border: 1px solid var(--rule);
+      background: var(--code-bg);
+      border-radius: 4px;
+      overflow: hidden
+    }
+
+    figure.code figcaption {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 6px 4px 14px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--rule);
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    .copy {
+      font: inherit;
+      font-size: 12px;
+      color: var(--ink-2);
+      background: transparent;
+      border: 1px solid var(--rule-strong);
+      border-radius: 3px;
+      padding: 2px 10px;
+      cursor: pointer
+    }
+
+    .copy:hover {
+      background: var(--surface);
+      color: var(--ink)
+    }
+
+    .copy.done {
+      color: var(--green);
+      border-color: var(--green)
+    }
+
+    figure.code pre {
+      margin: 0;
+      padding: 12px 16px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 13.5px;
+      line-height: 1.65;
+      tab-size: 4
+    }
+
+    figure.code .c {
+      color: var(--muted)
+    }
+
+    /* ---------- callouts ---------- */
+    .checkpoint {
+      margin: 20px 0 6px;
+      padding: 12px 16px 4px;
+      background: var(--green-soft);
+      border-left: 3px solid var(--green);
+      border-radius: 0 4px 4px 0
+    }
+
+    .checkpoint .label {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      color: var(--on-green);
+      background: var(--green);
+      border-radius: 3px;
+      padding: 1px 8px;
+      margin-bottom: 6px
+    }
+
+    .note {
+      margin: 0 0 18px;
+      padding: 12px 16px 2px;
+      background: var(--amber-soft);
+      border-left: 3px solid var(--amber);
+      border-radius: 0 4px 4px 0
+    }
+
+    .note .label {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      color: var(--amber);
+      margin-bottom: 4px
+    }
+
+    /* ---------- flow diagram ---------- */
+    figure.flows {
+      margin: 0 0 20px;
+      padding: 18px 18px 8px;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 4px
+    }
+
+    .flow-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink-2);
+      margin: 0 0 10px;
+      letter-spacing: .03em
+    }
+
+    .flow-title span {
+      font-family: var(--mono);
+      color: var(--accent-ink);
+      margin-right: 4px
+    }
+
+    .flow {
+      list-style: none;
+      margin: 0 0 16px;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: 6px 4px
+    }
+
+    .flow li {
+      margin: 0
+    }
+
+    .node {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+      padding: 8px 12px;
+      border: 1px solid var(--rule-strong);
+      background: var(--surface-2);
+      border-radius: 4px;
+      font-size: 14px;
+      line-height: 1.45
+    }
+
+    .node b {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--accent-ink)
+    }
+
+    .node .steps {
+      color: var(--ink)
+    }
+
+    .node em {
+      font-style: normal;
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    .node.job {
+      background: var(--accent-soft);
+      border-color: var(--accent)
+    }
+
+    .node.end {
+      background: var(--surface);
+      border-color: var(--ink-2);
+      font-weight: 500
+    }
+
+    .edge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      color: var(--muted);
+      font-size: 11.5px;
+      line-height: 1.3;
+      text-align: center;
+      max-width: 6.5em
+    }
+
+    .edge::after {
+      content: "→";
+      font-size: 18px;
+      line-height: 1;
+      color: var(--ink-2)
+    }
+
+    .edge.down {
+      flex-basis: 100%;
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: 8px;
+      max-width: none;
+      padding-left: 14px
+    }
+
+    .edge.down::after {
+      content: "↓";
+      order: -1
+    }
+
+    .edge.gate {
+      color: var(--green);
+      font-weight: 600
+    }
+
+    .edge.gate::after {
+      color: var(--green)
+    }
+
+    @media (max-width:640px) {
+      .flow {
+        flex-direction: column;
+        align-items: stretch
+      }
+
+      .edge {
+        flex-direction: row;
+        gap: 6px;
+        min-width: 0;
+        max-width: none;
+        justify-content: flex-start;
+        padding-left: 18px
+      }
+
+      .edge::after {
+        content: "↓"
+      }
+
+      .edge.down {
+        padding-left: 18px
+      }
+    }
+
+    footer {
+      border-top: 1px solid var(--rule);
+      padding: 22px 0 40px;
+      color: var(--muted);
+      font-size: 13px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 20px
+    }
+
+    /* ---------- print ---------- */
+    @page {
+      size: A4;
+      margin: 16mm 14mm
+    }
+
+    @media print {
+      :root {
+        --ground: #fff;
+        --surface: #fff;
+        --surface-2: #F0F2F5;
+        --code-bg: #F6F7F9;
+        --ink: #111820;
+        --ink-2: #3A4654;
+        --muted: #5C6773;
+        --rule: #C9D0D8;
+        --rule-strong: #9AA4AF;
+        --accent: #1F49B5;
+        --accent-ink: #173A93;
+        --accent-soft: #EDF1FB;
+        --amber: #A85E14;
+        --amber-soft: #FBF3E8;
+        --green: #2E7D4F;
+        --green-soft: #EAF4EE;
+        --on-accent: #fff;
+        --on-green: #fff;
+        color-scheme: light;
+      }
+
+      body {
+        font-size: 11.5pt;
+        line-height: 1.6
+      }
+
+      .wrap {
+        max-width: none;
+        padding: 0
+      }
+
+      .layout {
+        display: block;
+        padding-top: 10px
+      }
+
+      .toc-wrap,
+      .copy,
+      .anchor,
+      .skip {
+        display: none !important
+      }
+
+      .masthead {
+        padding: 0 0 14px
+      }
+
+      main {
+        max-width: none;
+        padding-bottom: 0
+      }
+
+      h2,
+      h3 {
+        break-after: avoid
+      }
+
+      h2 {
+        margin-top: 30px
+      }
+
+      figure,
+      .tablewrap,
+      .checkpoint,
+      .note,
+      tr {
+        break-inside: avoid
+      }
+
+      figure.code pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        font-size: 10pt
+      }
+
+      .tablewrap {
+        overflow: visible
+      }
+
+      a {
+        color: var(--accent-ink);
+        text-decoration: none
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <a class="skip" href="#content">跳到正文</a>
+  <div class="wrap">
+    <header class="masthead">
+      <div class="eyebrow"><span>互联网产品开发与运维（2026 秋季）</span><span class="tag">实验 2</span></div>
+      <h1>实验 2：测出上限，看见饱和</h1>
+      <dl class="meta">
+        <div>
+          <dt>发布</dt>
+          <dd class="num">2026-10-16</dd>
+        </div>
+        <div>
+          <dt>截止</dt>
+          <dd class="num">2026-10-30 23:59</dd>
+        </div>
+        <div>
+          <dt>形式</dt>
+          <dd>小组；实验资源以组为单位</dd>
+        </div>
+        <div>
+          <dt>占比</dt>
+          <dd class="num">总评 20%</dd>
+        </div>
+        <div>
+          <dt>检查方式</dt>
+          <dd>现场检查，安排在课外，不占上课时间；具体时间另行通知</dd>
+        </div>
+        <div>
+          <dt>预计耗时</dt>
+          <dd class="num">约 6～8 小时</dd>
+        </div>
+      </dl>
+    </header>
+    <div class="layout">
+      <details class="toc-wrap" open>
+        <summary>目录</summary>
+        <nav class="toc" aria-label="目录">
+          <ol>
+            <li><a href="#s1"><span class="n">1</span>学习产出</a>
+            </li>
+            <li><a href="#s2"><span class="n">2</span>前置知识与环境</a>
+              <ol>
+                <li><a href="#h-1">示例服务 enrolld</a></li>
+              </ol>
+            </li>
+            <li><a href="#s3"><span class="n">3</span>拓扑与测量口径</a>
+              <ol>
+                <li><a href="#h-2">口径</a></li>
+                <li><a href="#h-3">每次实验产出的数据</a></li>
+              </ol>
+            </li>
+            <li><a href="#s4"><span class="n">4</span>任务</a>
+              <ol>
+                <li><a href="#task-0">任务 0：环境与基线</a></li>
+                <li><a href="#task-1">任务 1：指标流水线</a></li>
+                <li><a href="#task-2">任务 2：读路径，连接池与 CPU 哪个先达到上限</a></li>
+                <li><a href="#task-3">任务 3：写路径与磁盘</a></li>
+                <li><a href="#task-4">任务 4：数据与分析</a></li>
+              </ol>
+            </li>
+            <li><a href="#s5"><span class="n">5</span>选做</a>
+            </li>
+            <li><a href="#s6"><span class="n">6</span>常见问题</a>
+            </li>
+            <li><a href="#s7"><span class="n">7</span>提交与评分</a>
+            </li>
+            <li><a href="#s8"><span class="n">8</span>恢复与清理</a>
+            </li>
+            <li><a href="#s9"><span class="n">9</span>测量与局限</a>
+            </li>
+            <li><a href="#s10"><span class="n">10</span>参考资料</a>
+            </li>
+          </ol>
+        </nav>
+      </details>
+      <main id="content">
+        <h2 id="s1"><span class="sec-num">1</span>学习产出<a class="anchor" href="#s1" aria-label="链接到本节">#</a></h2>
+        <p>完成本实验后，应当能够：</p>
+        <ol>
+          <li>运用 L-07 的资源三问（上限由什么决定、如何判断饱和、如何换算容量），为一个服务的 CPU、连接池和磁盘分别建立资源账：先推算上限，再用压测验证。</li>
+          <li>搭建一条最小的指标流水线：服务埋点并暴露 <code>/metrics</code>，由 Prometheus 抓取，再用 PromQL 查询。RED 的三条查询和一条 SLI 查询由各组自行编写（L-08 第
+            19、24、25 页）。</li>
+          <li>运用 USE 和 RED 定位瓶颈：区分利用率与饱和度，找出正在排队的资源。该资源可能不在 CPU、内存、带宽这三项常用指标之中（L-07 的引例）。</li>
+          <li>对写路径做一次最小改动（组提交）并复测，说明持久性、延迟与吞吐之间的取舍。</li>
+          <li>说明一个延迟数值的测量位置与计算方法：客户端还是服务端，平均值还是分位数，以及如何从直方图得出 SLI。</li>
+        </ol>
+        <p>本实验承担模块 5 后半部分的实践：L-06 课程实践计算了“四个上限中哪个最先达到”，L-07 第 22 页预告了“逐项使资源饱和，识别其征兆”，L-08 讲授了 USE、RED、直方图和
+          SLO。本实验用各组自己测得的数据完整实践一遍。贯穿全程的仍是同一个问题：这项技术解决了什么问题，又增加了什么成本？</p>
+        <p>实验按“提出假设 → 施加负载或变更 → 收集证据 → 分析 → 改进并复测”的顺序安排：</p>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>环节</th>
+                <th>本实验中的对应内容</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="nw">假设</td>
+                <td>任务 2、3 开始测量之前，按 L-06、L-07 的换算方法写下每种资源的上限，以及最先达到上限的资源</td>
+              </tr>
+              <tr>
+                <td class="nw">基线</td>
+                <td>任务 0：主机规格、fsync 耗时、空载时各工具的读数；任务 1：低负载下每个请求的开销</td>
+              </tr>
+              <tr>
+                <td class="nw">施加负载</td>
+                <td>开环、分阶段加压，每次只使一种资源先达到上限</td>
+              </tr>
+              <tr>
+                <td class="nw">证据</td>
+                <td><code>runs/</code> 下每次实验的客户端结果、服务层指标、资源层指标和原始日志</td>
+              </tr>
+              <tr>
+                <td class="nw">分析</td>
+                <td class="nw">任务 4 的四个问题</td>
+              </tr>
+              <tr>
+                <td class="nw">改进与复测</td>
+                <td>任务 2：调大连接池，观察下一个达到上限的资源；任务 3：改为组提交后复测</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h2 id="s2"><span class="sec-num">2</span>前置知识与环境<a class="anchor" href="#s2" aria-label="链接到本节">#</a></h2>
+        <p>要求熟悉 Linux 命令行，能在多个终端之间切换操作。Go 只需能够编译，不要求编写；建议阅读示例代码，尤其是 <code>internal/metrics/</code>，它是
+          <code>/metrics</code> 的全部实现。</p>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>项</th>
+                <th>要求（版本查于 2026-10-11）</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="nw">主机</td>
+                <td>组内一台 Linux 云主机，至少 2 个 vCPU、2 GB 内存，具有 root 权限。必做部分只使用这一台；第二台仅用于选做 O2。现场检查时需在这台主机上重新运行实验，检查结束前不要释放
+                </td>
+              </tr>
+              <tr>
+                <td class="nw">磁盘</td>
+                <td>数据目录 <code>data/</code> 必须位于真实的块设备上（云盘或本地盘），不能位于 tmpfs。tmpfs 驻留在内存中，fsync 立即返回，写路径的测量将失去意义</td>
+              </tr>
+              <tr>
+                <td class="nw">系统</td>
+                <td>命令按 Ubuntu 22.04 或 24.04 编写；其他发行版请替换为相应的包管理命令。WSL2 和容器中可以完成整个流程，但 CPU 和磁盘的数据不能代表真实主机，不得用作正式数据</td>
+              </tr>
+              <tr>
+                <td class="nw">Go</td>
+                <td>1.26 或更高版本（实验 1 已安装）。示例没有第三方依赖，构建时无需联网</td>
+              </tr>
+              <tr>
+                <td class="nw">sysstat</td>
+                <td>提供 <code>mpstat</code>、<code>iostat</code>、<code>pidstat</code>；<code>vmstat</code> 属于 procps，通常已预装
+                </td>
+              </tr>
+              <tr>
+                <td class="nw">Prometheus</td>
+                <td>3.13.4。3.13 是长期支持版（LTS），支持到 2027-07-31</td>
+              </tr>
+              <tr>
+                <td>node_exporter</td>
+                <td class="nw">1.12.1</td>
+              </tr>
+              <tr>
+                <td class="nw">示例</td>
+                <td>课程模板仓库 <a href="https://github.com/zilinglius/operations-2026-lab2-sample" target="_blank"
+                    rel="noopener">https://github.com/zilinglius/operations-2026-lab2-sample</a>（<code>enroll-lab</code>）
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>本实验只使用统一示例。如需将同样的方法用于小组项目，见选做 O4。</p>
+        <h3 id="h-1">示例服务 enrolld<a class="anchor" href="#h-1" aria-label="链接到本节">#</a></h3>
+        <p><code>enrolld</code> 是一个简化的选课后端，读路径和写路径各含一个可以达到饱和的资源：</p>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>接口</th>
+                <th>功能</th>
+                <th>对应讲义</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>GET /api/courses/{id}</code></td>
+                <td>先执行一段纯计算（<code>-work</code>，固定循环次数），再从“数据库连接池”中占用一个连接（共 <code>-pool</code> 个连接，每次占用
+                  <code>-db-ms</code> 毫秒）</td>
+                <td>L-06 课程实践的“CPU”和“连接池”两个上限</td>
+              </tr>
+              <tr>
+                <td><code>POST /api/enroll</code></td>
+                <td>将一条选课记录追加到 <code>data/enroll.log</code>，按 <code>-sync</code> 指定的方式持久化后才返回“选课成功”</td>
+                <td>L-07 资源账中磁盘 fsync 那一行</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>“数据库”是模拟的：占用一个连接并休眠 <code>-db-ms</code> 毫秒。它不消耗本机
+          CPU，只限制可同时执行的查询数量；池满后请求只能排队，这一点与真实连接池相同。真实数据库在连接数增加后自身也会变慢（L-06 第 19 页），这一点无法模拟，见第 9 节。</p>
+        <p><code>-sync</code> 有三种取值：</p>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>取值</th>
+                <th>实现方式</th>
+                <th>类比</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="nw"><code>each</code>（默认）</td>
+                <td>每次提交在 write 之后执行一次 fsync，提交之间互斥，同一时刻只处理一次提交</td>
+                <td>热点行上的锁：锁持有时间中包含等待磁盘的时间（L-07 第 25 页）</td>
+              </tr>
+              <tr>
+                <td class="nw"><code>group</code></td>
+                <td>组提交：后台协程将当前排队的记录一次写入、一次 fsync，再逐个返回</td>
+                <td>L-07 第 14 页：组提交可合并 fsync</td>
+              </tr>
+              <tr>
+                <td class="nw"><code>interval</code></td>
+                <td>写入页缓存即返回，后台每秒执行一次 fsync</td>
+                <td>MySQL 的 <code>innodb_flush_log_at_trx_commit=2</code>（L-07 第 26、27 页）</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h2 id="s3"><span class="sec-num">3</span>拓扑与测量口径<a class="anchor" href="#s3" aria-label="链接到本节">#</a></h2>
+        <figure class="flows" aria-label="拓扑与测量位置">
+          <div class="flow-title"><span>①</span> 负载：一台主机上，loadgen 和 enrolld 绑在不同的核上</div>
+          <ol class="flow">
+            <li class="node"><b>loadgen</b><span class="steps">开环，分阶段</span><em>客户端延迟在这里量</em></li>
+            <li class="edge"><span>HTTP，回环</span></li>
+            <li class="node job"><b>enrolld</b><span class="steps">读：计算 → 等连接 → 占连接</span><span class="steps">写：追加记录 →
+                fsync</span><em>服务端耗时在这里量</em></li>
+            <li class="edge"><span>fsync</span></li>
+            <li class="node end">磁盘<em>await 按每次 I/O 计</em></li>
+          </ol>
+          <div class="flow-title"><span>②</span> 指标：每 1～5 秒拉取一次，实验结束后按阶段查询</div>
+          <ol class="flow">
+            <li class="node"><b>enrolld /metrics</b><em>服务层</em></li>
+            <li class="node"><b>node_exporter</b><em>资源层</em></li>
+            <li class="edge"><span>拉取</span></li>
+            <li class="node job"><b>Prometheus</b><span class="steps">数据在 /dev/shm</span></li>
+            <li class="edge"><span>promsteps</span></li>
+            <li class="node end"><b>red.csv、use.csv</b><em>每个阶段一行</em></li>
+          </ol>
+          <div class="flow-title"><span>③</span> 原始数据：和负载同时记录</div>
+          <ol class="flow">
+            <li class="node"><b>loadgen</b></li>
+            <li class="edge"><span></span></li>
+            <li class="node end"><b>steps.csv</b><em>客户端，每个阶段一行</em></li>
+          </ol>
+          <ol class="flow">
+            <li class="node"><b>vmstat、mpstat、iostat、pidstat</b></li>
+            <li class="edge"><span></span></li>
+            <li class="node end"><b>*.log</b><em>每秒一行</em></li>
+          </ol>
+        </figure>
+        <p>必做部分全部在一台主机上完成。loadgen 与 enrolld 绑定到不同的核，以免压测程序与被测服务争用 CPU。Prometheus、node_exporter 与 loadgen 绑定在同一组核上：</p>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>vCPU 数</th>
+                <th>loadgen、Prometheus、node_exporter（<code>GEN_CPUS</code>）</th>
+                <th>enrolld</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="nw">2</td>
+                <td class="nw"><code>0</code></td>
+                <td class="nw"><code>1</code></td>
+              </tr>
+              <tr>
+                <td class="nw">4</td>
+                <td class="nw"><code>0-1</code></td>
+                <td class="nw"><code>2-3</code></td>
+              </tr>
+              <tr>
+                <td class="nw">8 及以上</td>
+                <td class="nw"><code>0-3</code></td>
+                <td class="nw"><code>4-5</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>enrolld 最多分配 2 个核，否则其上限过高，loadgen 无法以足够的速率发送请求。分核前先查看 <code>lscpu -e</code>：CORE 列相同的两个 CPU
+          是同一物理核上的两个超线程，应尽量使 loadgen 与 enrolld 位于不同的 CORE。许多 2 vCPU 云主机就是一个物理核的两个超线程，此时无法分开，如实记录即可（L-07 第 9 页：1 个 vCPU
+          通常对应一个超线程）；也有虚拟机不暴露这一层信息，<code>lscpu -e</code> 中每个 vCPU 各占一个 CORE，此时同样如实记录。</p>
+        <h3 id="h-2">口径<a class="anchor" href="#h-2" aria-label="链接到本节">#</a></h3>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>指标</th>
+                <th>测量位置</th>
+                <th>计算方法</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="nw">到达率</td>
+                <td class="nw">loadgen</td>
+                <td>每个阶段按目标到达率发送请求。开环：按计划时刻发送，不等待前一个请求返回；间隔服从指数分布（泊松到达），模拟相互独立的用户</td>
+              </tr>
+              <tr>
+                <td class="nw">吞吐 <code>ok_rps</code></td>
+                <td class="nw">loadgen</td>
+                <td>该阶段成功（2xx）的请求数 ÷ 阶段时长</td>
+              </tr>
+              <tr>
+                <td>错误率 <code>error_rate</code></td>
+                <td class="nw">loadgen</td>
+                <td>（非 2xx + 超时 + 连接错误）÷ 发出的请求数。服务端的 <code>server_error_rate</code> 只统计 5xx</td>
+              </tr>
+              <tr>
+                <td class="nw">客户端延迟</td>
+                <td class="nw">loadgen</td>
+                <td>只统计成功的请求，从计划发送时刻计时至读完响应体为止。分位数采用最近秩法：排序后取第 ⌈p% × n⌉ 个</td>
+              </tr>
+              <tr>
+                <td class="nw">服务端耗时</td>
+                <td class="nw">enrolld 的直方图</td>
+                <td>从进入处理函数到处理函数返回，不含内核中的排队与网络传输，也不含请求进入处理函数之前在 Go 运行时中的等待时间</td>
+              </tr>
+              <tr>
+                <td class="nw">服务端 p99</td>
+                <td>PromQL <code>histogram_quantile</code></td>
+                <td>在桶内做线性插值，精度受桶宽限制（L-08 第 10 页）</td>
+              </tr>
+              <tr>
+                <td class="nw">每请求 CPU</td>
+                <td class="nw">Prometheus</td>
+                <td>进程 CPU 秒数的增量 ÷ 请求数的增量</td>
+              </tr>
+              <tr>
+                <td class="nw">阶段窗口</td>
+                <td class="nw">promsteps</td>
+                <td>每个阶段去掉开头 5 秒。Prometheus 每秒抓取一次 enrolld、每 5 秒抓取一次 node_exporter，因此一个 30
+                  秒的阶段中，<code>inflight_avg</code> 等瞬时值约有 25 个样本</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Little's Law（L = λ × W）中的 W 是平均时间，必须使用平均值，不能代入 p99；各阶段、各实例的分位数也不能直接平均（L-08 第 10、13 页）。</p>
+        <p>为什么采用开环：wrk 等闭环工具固定 N 个连接，收到响应后才发送下一个请求，服务一旦变慢便自动减少发送，排队因此被掩盖，测得的延迟偏乐观。开环更接近选课开放时彼此独立涌入的学生。代价是压测程序必须按时发出请求，因此
+          loadgen 也报告自身的发送滞后（<code>lag_p99_ms</code>）和 CPU（<code>gen_cpu_pct</code>），超出阈值时在 <code>warn</code> 列中给出警告。
+        </p>
+        <h3 id="h-3">每次实验产出的数据<a class="anchor" href="#h-3" aria-label="链接到本节">#</a></h3>
+        <p><code>scripts/run.sh &lt;名字&gt; &lt;loadgen 参数…&gt;</code> 运行一次实验，结果全部存入
+          <code>runs/&lt;名字&gt;/</code>。名字不能重复；重新运行同一实验时换一个名字，两次的数据均保留：</p>
+        <div class="tablewrap">
+          <table class="wide-first">
+            <thead>
+              <tr>
+                <th>文件</th>
+                <th>内容</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="nw"><code>meta.txt</code></td>
+                <td>主机、内核、磁盘、enrolld 的参数（<code>/config</code>）、绑核、压测命令、仓库提交</td>
+              </tr>
+              <tr>
+                <td class="nw"><code>steps.csv</code></td>
+                <td>客户端数据，每个阶段一行；最后一行 <code>all</code> 是所有有负载阶段的合计</td>
+              </tr>
+              <tr>
+                <td class="nw"><code>red.csv</code></td>
+                <td>服务层数据，每个阶段一行，查询见 <code>deploy/queries-red.txt</code></td>
+              </tr>
+              <tr>
+                <td class="nw"><code>use.csv</code></td>
+                <td>资源层数据，每个阶段一行，查询见 <code>deploy/queries-use.txt</code></td>
+              </tr>
+              <tr>
+                <td><code>vmstat.log</code>、<code>mpstat.log</code>、<code>iostat.log</code>、<code>pidstat.log</code>
+                </td>
+                <td>资源层的原始输出，每秒一行</td>
+              </tr>
+              <tr>
+                <td><code>metrics-start.txt</code>、<code>metrics-end.txt</code></td>
+                <td>开始和结束时 <code>/metrics</code> 的原文</td>
+              </tr>
+              <tr>
+                <td class="nw"><code>loadgen.log</code></td>
+                <td>loadgen 的进度、结果表和警告</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>各列的含义见两个查询文件中的注释。按 USE 和 RED 分类如下：</p>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>对象</th>
+                <th>U 利用率</th>
+                <th>S 饱和度</th>
+                <th>E 错误</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="nw">CPU</td>
+                <td><code>svc_cpu_busy</code>、<code>cpu_cores</code></td>
+                <td>内核：<code>procs_running_avg</code>、<code>cpu_psi_some</code>、<code>cpu_wait_threads</code>；Go
+                  运行时：<code>sched_wait_p99_ms</code></td>
+                <td class="nw">—</td>
+              </tr>
+              <tr>
+                <td class="nw">连接池</td>
+                <td><code>pool_in_use_avg</code> ÷ 池大小</td>
+                <td><code>pool_wait_p99_ms</code></td>
+                <td class="nw">等连接超时返回 503</td>
+              </tr>
+              <tr>
+                <td class="nw">磁盘</td>
+                <td><code>disk_util</code>、<code>disk_w_per_s</code>、<code>disk_wkb_per_s</code></td>
+                <td>
+                  <code>disk_aqu_sz</code>、<code>disk_w_await_ms</code>、<code>disk_f_await_ms</code>、<code>cpu_iowait</code>
+                </td>
+                <td class="nw">写入失败返回 500</td>
+              </tr>
+              <tr>
+                <td class="nw">内存</td>
+                <td><code>mem_available_min_mb</code></td>
+                <td><code>swap_in_per_s</code></td>
+                <td class="nw">OOM（留待实验 3）</td>
+              </tr>
+              <tr>
+                <td class="nw">服务（RED）</td>
+                <td>R：<code>server_rps</code>、<code>ok_rps</code></td>
+                <td>等待对象：<code>inflight_avg</code>、<code>pool_wait_p99_ms</code>、<code>sched_wait_p99_ms</code></td>
+                <td>
+                  E：<code>server_error_rate</code>、<code>error_rate</code>；D：<code>server_p99_ms</code>、<code>p99_ms</code>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h2 id="s4"><span class="sec-num">4</span>任务<a class="anchor" href="#s4" aria-label="链接到本节">#</a></h2>
+        <p>每个任务末尾的“检查点”供各组自查，现场检查也以此为依据。证据应在操作过程中及时填入 <code>LAB2.md</code>；表格用 <code>scripts/table.sh</code>
+          生成后粘贴，不要手工抄写。</p>
+        <p>本实验需要同时打开三个终端（或用 tmux 打开三个窗口），下文分别称为终端 A、B、C：A 运行 enrolld，B 运行 node_exporter 和 Prometheus，C
+          用于执行实验。三个终端都先进入仓库根目录。</p>
+        <h3 id="task-0">任务 0：环境与基线<span class="badge">约 60 分钟</span><a class="anchor" href="#task-0"
+            aria-label="链接到本节">#</a></h3>
+        <ol>
+          <li>
+            <p>组长打开模板仓库 <a href="https://github.com/zilinglius/operations-2026-lab2-sample" target="_blank"
+                rel="noopener">https://github.com/zilinglius/operations-2026-lab2-sample</a>，点击 Use this template →
+              Create a new repository。所有者选择组长账号，仓库名为 <code>ops-lab2-&lt;组号&gt;</code>，可见性选择 Public。在 Settings →
+              Collaborators 中邀请组员并授予 Write 权限。本实验不要求使用 PR，组员直接推送到 main 即可。</p>
+          </li>
+          <li>
+            <p>在实验主机上克隆小组仓库，安装 sysstat，编译程序并下载工具：</p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>git clone https://github.com/&lt;组长账号&gt;/ops-lab2-&lt;组号&gt;.git ~/lab2 &amp;&amp; cd ~/lab2
+sudo apt install -y sysstat         <span class="c"># 其他发行版：sudo dnf install -y sysstat</span>
+make build test                     <span class="c"># bin/enrolld、bin/loadgen、bin/promsteps</span>
+scripts/get-tools.sh                <span class="c"># Prometheus、node_exporter，核对 sha256 后解压到 tools/</span>
+mkdir -p data</code></pre>
+            </figure>
+            <p><code>get-tools.sh</code> 从 GitHub 下载，两个压缩包合计约 110 MB。下载过慢时，可在其他位置下载同名文件，放入 <code>tools/</code>
+              后重新运行脚本，脚本校验 sha256 后直接使用。校验不通过的文件一律不得使用。</p>
+          </li>
+          <li>
+            <p>记录主机信息，填入 <code>LAB2.md</code> 第 1 节，并按第 3 节的表确定分核方案：</p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>lscpu; lscpu -e; free -m; uname -r; cat /etc/os-release
+findmnt -T data; lsblk</code></pre>
+            </figure>
+          </li>
+          <li>
+            <p>测量 fsync：连续运行三次，记录输出：</p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>for i in 1 2 3; do bin/enrolld -bench-fsync 2000; done</code></pre>
+            </figure>
+            <p>该命令在 <code>data/</code> 中重复执行“追加一条约 100 字节的记录，再 fsync”，与写路径的操作相同。1000 ÷ 平均耗时（ms）即单个写者串行 fsync
+              每秒最多能完成的次数，任务 3 将用到该值。</p>
+          </li>
+          <li>
+            <p>熟悉资源层工具。终端 A 运行 <code>vmstat -w 1</code>，终端 B 运行 <code>iostat -dx 1 &lt;盘&gt;</code>（盘名取自
+              <code>lsblk</code>，例如 <code>vda</code>，不带分区号），先在空载状态下观察 10 秒；然后在终端 C 运行
+              <code>bin/enrolld -bench-fsync 5000</code>，再观察 10 秒。两个工具输出的第一行都是开机以来的平均值，不要使用。按 <code>LAB2.md</code> 第 2
+              节的表记录两种状态下的读数，并回答：fsync 测试运行时 CPU 是否繁忙，哪几列表明存在等待。观察结束后按 Ctrl-C 停止。</p>
+          </li>
+        </ol>
+        <div class="checkpoint"><span class="label">检查点</span>
+          <p><code>LAB2.md</code> 第 1、2 节已填写，粘贴的是实际输出；三次 fsync 测试的结果齐全。</p>
+        </div>
+        <h3 id="task-1">任务 1：指标流水线<span class="badge">约 60 分钟</span><a class="anchor" href="#task-1"
+            aria-label="链接到本节">#</a></h3>
+        <ol>
+          <li>
+            <p>终端 A 启动 enrolld，并绑定到其分配的核上（下文按 2 vCPU 的分核方案编写，4 核主机将 <code>1</code> 换成 <code>2-3</code>）：</p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>taskset -c 1 bin/enrolld</code></pre>
+            </figure>
+            <p>默认只监听 <code>127.0.0.1:8080</code>，参数见 <code>bin/enrolld -h</code>。启动日志中会显示
+              <code>GOMAXPROCS</code>，其值应等于绑定的核数。</p>
+          </li>
+          <li>
+            <p>终端 B 启动 node_exporter 和 Prometheus（4 核主机将 <code>taskset -c 0</code> 换成 <code>taskset -c 0-1</code>）：</p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>taskset -c 0 tools/node_exporter --web.listen-address=127.0.0.1:9100 &gt; data/node_exporter.log 2&gt;&amp;1 &amp;
+taskset -c 0 tools/prometheus --config.file=deploy/prometheus.yml \
+  --storage.tsdb.path=/dev/shm/lab2-prom --web.listen-address=127.0.0.1:9090</code></pre>
+            </figure>
+            <p>Prometheus 的数据存放在 <code>/dev/shm</code>（内存）中，以免其写盘干扰任务 3 的磁盘测量。代价是主机重启后数据丢失，因此每次实验结束时 <code>run.sh</code>
+              会立即查询所需的值并存入 CSV。两个程序都只监听本机地址：Prometheus 没有登录验证，不得对公网开放。</p>
+          </li>
+          <li>
+            <p>在终端 C 确认两个抓取目标均为 up，再查看 enrolld 暴露的原始指标：</p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>curl -s 127.0.0.1:9090/api/v1/targets | grep -o '"health":"[a-z]*"'
+curl -s 127.0.0.1:8080/api/courses/1; echo
+curl -s 127.0.0.1:8080/metrics | grep -E '^(# TYPE )?http_request_duration_seconds'</code></pre>
+            </figure>
+            <p>对照 L-08 第 10、25 页阅读直方图：每个 <code>_bucket</code> 行给出耗时“≤ 上界 <code>le</code>”的累计次数，<code>+Inf</code> 桶等于
+              <code>_count</code>，<code>_sum</code> 是耗时之和。</p>
+          </li>
+          <li>
+            <p>如需用浏览器查看 Prometheus 界面，可在本地电脑上建立 SSH
+              隧道：<code>ssh -L 9090:127.0.0.1:9090 &lt;用户&gt;@&lt;主机&gt;</code>，然后访问 <a href="http://127.0.0.1:9090"
+                target="_blank" rel="noopener">http://127.0.0.1:9090</a>。无需也不应在安全组中放通 9090。</p>
+          </li>
+          <li>
+            <p>打开 <code>deploy/queries-red.txt</code>，将四行 TODO 替换为本组编写的 PromQL。前三行是 RED：每秒请求数、5xx 比例、服务端 p99（毫秒），参考 L-08
+              第 25 页。最后一行 <code>server_slo_good</code> 是服务端测得的 SLI：成功（<code>code=&quot;200&quot;</code>）且耗时不超过
+              <code>${slo}</code> 秒的请求占全部请求的比例（L-08 第 19 页“达标事件 ÷ 全部事件”）；提示：该阈值恰好是直方图的一个桶上界。只统计
+              <code>route=&quot;${route}&quot;</code> 这一个接口，窗口写作 <code>${window}</code>。可以先在 Prometheus 界面中试验，将
+              <code>${…}</code> 替换为具体值，例如
+              <code>route=&quot;/api/courses/{id}&quot;</code>、<code>[25s]</code>、<code>le=&quot;0.05&quot;</code>。</p>
+          </li>
+          <li>
+            <p>运行第一次实验，第一阶段的到达率为 0，作为空载基线：</p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>export GEN_CPUS=0                    <span class="c"># loadgen 绑定的核；4 核主机写 0-1</span>
+scripts/run.sh t1-light -url http://127.0.0.1:8080/api/courses/1 -rates 0,50,100
+scripts/table.sh runs/t1-light ok_rps mean_ms p99_ms server_rps server_mean_ms server_p99_ms cpu_ms_per_req db_query_mean_ms</code></pre>
+            </figure>
+            <p><code>run.sh</code> 默认每个阶段 30 秒，结束时在终端打印 <code>red.csv</code> 和 <code>use.csv</code>。</p>
+          </li>
+        </ol>
+        <aside class="note"><span class="label">提示</span>
+          <ul>
+            <li><code>promsteps</code> 报告“返回了 N 条序列”，说明查询未聚合，应用 <code>sum(...)</code> 将多条序列合并为一条。直方图须先
+              <code>sum by (le)</code> 再计算分位数，因为直方图还带有 <code>code</code> 标签。</li>
+            <li>没有 5xx 时，<code>server_error_rate</code> 的分子查询不到任何序列，结果为空而非 0。如需得到 0，在分子后加 <code>or vector(0)</code>。
+            </li>
+            <li>Prometheus 3 会将 <code>le</code> 标签规范化为浮点数写法：<code>le=&quot;1&quot;</code> 存储为
+              <code>le=&quot;1.0&quot;</code>，<code>le=&quot;0.05&quot;</code> 不变。按 <code>le</code> 查询时须使用规范化后的值。</li>
+          </ul>
+        </aside>
+        <div class="checkpoint"><span class="label">检查点</span>
+          <p>四条查询能在 <code>runs/t1-light/red.csv</code> 中得到数值（空载阶段除外）；<code>LAB2.md</code> 第 3
+            节已填写，记录了每次查询实际占用连接的时间和每个请求消耗的 CPU。查询写错可以修正，修改后用 <code>scripts/requery.sh runs/&lt;名字&gt;</code> 对已完成的实验重新查询。
+          </p>
+        </div>
+        <h3 id="task-2">任务 2：读路径，连接池与 CPU 哪个先达到上限<span class="badge">约 120 分钟</span><a class="anchor" href="#task-2"
+            aria-label="链接到本节">#</a></h3>
+        <p>这正是 L-06 课程实践的“四个上限中哪个最先达到”，只是数据须使用本组的实测值。</p>
+        <ol>
+          <li>
+            <p><strong>先预测，再测量。</strong> 用任务 1 测得的每次查询占用时间和每请求 CPU，按 L-06 第 16、19 页的换算方法计算两个上限：连接池上限为“池大小 ÷ 每次占用的秒数”，CPU
+              上限为“enrolld 的核数 ÷ 每个请求的 CPU 秒数”。写下哪个上限先达到、客户端 p99 从多少请求/秒起会超过 50 ms，填入 <code>LAB2.md</code> 第 4.1
+              节，然后再开始测量。预测写好后不要修改：预测错误不扣分，与实测不一致之处正是分析需要讨论的内容。</p>
+          </li>
+          <li>
+            <p><strong>R1：默认的 <code>-pool 4</code>。</strong> 以较小的上限为基准生成到达率（默认取 0.2～1.2 倍，共 9 个阶段，约 5 分钟），运行一次：</p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>RATES=$(scripts/rates.sh 377)          <span class="c"># 将 377 替换为本组算出的较小上限</span>
+scripts/run.sh r1-pool4 -url http://127.0.0.1:8080/api/courses/1 -rates "$RATES"
+scripts/table.sh runs/r1-pool4 ok_rps error_rate p99_ms server_p99_ms server_mean_ms inflight_avg cpu_ms_per_req pool_in_use_avg pool_wait_p99_ms sched_wait_p99_ms svc_cpu_busy procs_running_avg</code></pre>
+            </figure>
+            <p>运行期间可以另开一个终端观察 <code>vmstat -w 1</code>，或在 Prometheus 界面中绘制 <code>db_pool_in_use</code> 和
+              <code>http_inflight_requests</code>。</p>
+          </li>
+          <li>
+            <p><strong>CPU 消耗在何处。</strong> 在约 0.8 倍上限的负载下采集 20 秒 CPU 剖析：</p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>taskset -c "$GEN_CPUS" bin/loadgen -url http://127.0.0.1:8080/api/courses/1 \
+  -rates "$(scripts/rates.sh 377 0.8)" -step 40s &gt; /dev/null 2&gt;&amp;1 &amp;
+LG=$!                                  <span class="c"># 后台 loadgen 的进程号</span>
+sleep 10
+go tool pprof -top -nodecount=15 'http://127.0.0.1:8080/debug/pprof/profile?seconds=20' | tee runs/r1-pool4/pprof-top.txt
+wait "$LG"                             <span class="c"># 等待这次 40 秒的加压结束</span></code></pre>
+            </figure>
+            <p><code>main.spin</code> 是读路径上的计算。其余时间消耗在 HTTP 处理、系统调用和 Go 运行时上，这些同样计入“每个请求的 CPU”。</p>
+          </li>
+          <li>
+            <p><strong>R2：调大连接池，观察下一个达到上限的资源</strong>（L-06 课程实践讨论 1）。从 R1 中选取一个尚未达到上限、负载又尽可能高的阶段，用其
+              <code>cpu_ms_per_req</code> 重新推算 CPU 上限 C。将连接池调至 P2 = ⌈2 × C × 每次查询的秒数⌉，使连接池上限为 CPU 上限的两倍，这样先达到上限的应当是
+              CPU。将 C、P2、到达率和预测写入 <code>LAB2.md</code> 第 4.4 节。然后在终端 A 按 Ctrl-C 停止 enrolld，用新的池大小重启：</p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>taskset -c 1 bin/enrolld -pool 32       <span class="c"># 终端 A；将 32 替换为本组的 P2</span></code></pre>
+            </figure>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>RATES=$(scripts/rates.sh 1300 0.3 0.6 0.8 0.9 1.0 1.1 1.25 1.5)   <span class="c"># 终端 C；将 1300 替换为本组的 C</span>
+scripts/run.sh r2-pool32 -url http://127.0.0.1:8080/api/courses/1 -rates "$RATES"
+scripts/table.sh runs/r2-pool32 ok_rps error_rate p99_ms server_p99_ms inflight_avg cpu_cores cpu_ms_per_req cpu_wait_threads sched_wait_p99_ms pool_in_use_avg svc_cpu_busy procs_running_avg cpu_psi_some</code></pre>
+            </figure>
+            <p>服务过载后，loadgen 若在某个阶段结束时发现成功返回的请求不足一半，便停止后续阶段，以免拖垮主机。这在 R2 末尾属于正常现象，记录停止于哪个阶段即可。如果直到最后一个阶段仍未达到上限，说明 C
+              估计偏低：用最后几个阶段的 <code>cpu_ms_per_req</code> 重新估计 C，换一个名字重新运行，两次的数据均保留。</p>
+          </li>
+        </ol>
+        <div class="checkpoint"><span class="label">检查点</span>
+          <p>第 4.1、4.4 节已写预测；R1 的阶段超过了连接池上限，R2 的阶段超过了 CPU 上限；<code>runs/r1-pool4/pprof-top.txt</code>
+            存在；<code>LAB2.md</code> 第 4 节的表格都已粘贴。</p>
+        </div>
+        <h3 id="task-3">任务 3：写路径与磁盘<span class="badge">约 90 分钟</span><a class="anchor" href="#task-3"
+            aria-label="链接到本节">#</a></h3>
+        <p>写路径的服务端耗时通常只有几毫秒，因此 SLO 阈值改为 20 ms（<code>export SLO=0.02</code>；之后若回到读路径重新运行，先执行 <code>unset SLO</code>，恢复默认的
+          50 ms）。每次重启 enrolld 之前删除上一次的 <code>data/enroll.log</code>，该文件会持续增大。</p>
+        <ol>
+          <li>
+            <p><strong>预测</strong>：用任务 0 测得的 fsync 平均耗时，计算 <code>-sync each</code> 下的最大 TPS。写路径没有 <code>spin</code>，用任务
+              2 第 3 步拆分出的“spin 以外的开销”估计每个写请求的 CPU，再估计达到上限时 enrolld 需要使用几个核。填入 <code>LAB2.md</code> 第 5.1 节，再开始测量。</p>
+          </li>
+          <li>
+            <p><strong>W1：<code>-sync each</code>。</strong></p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>rm -f data/enroll.log; taskset -c 1 bin/enrolld -sync each      <span class="c"># 终端 A</span></code></pre>
+            </figure>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>export SLO=0.02                                                   <span class="c"># 终端 C</span>
+B='{"student":"s{{seq}}","course":"c1"}'                          <span class="c"># {{seq}} 将替换为请求序号</span>
+RATES=$(scripts/rates.sh 327 0.2 0.4 0.6 0.8 0.9 1.0 1.1 1.2)    <span class="c"># 将 327 替换为本组算出的最大 TPS</span>
+scripts/run.sh w1-each -url http://127.0.0.1:8080/api/enroll -body "$B" -rates "$RATES"
+scripts/table.sh runs/w1-each ok_rps error_rate p99_ms server_p99_ms cpu_cores fsync_per_s fsync_mean_ms batch_mean svc_cpu_busy cpu_iowait disk_w_per_s disk_w_await_ms disk_f_per_s disk_f_await_ms disk_aqu_sz disk_util</code></pre>
+            </figure>
+            <p>这正是 L-07 的引例：吞吐量无法提升、延迟很高，而 CPU、内存、带宽三项指标均未告警。</p>
+          </li>
+          <li>
+            <p><strong>预测组提交的效果</strong>：在 W1 达到上限时的到达率下，改为组提交后吞吐量是多少，平均每次 fsync 处理几条记录，延迟大约多少。写入第 5.3 节，再开始测量。</p>
+          </li>
+          <li>
+            <p><strong>W2：<code>-sync group</code>。</strong> 重启时将 <code>-sync each</code> 换成
+              <code>-sync group</code>，到达率提高到 W1 上限的 4 倍：</p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>rm -f data/enroll.log; taskset -c 1 bin/enrolld -sync group     <span class="c"># 终端 A</span></code></pre>
+            </figure>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>RATES=$(scripts/rates.sh 327 0.4 0.8 1.0 1.5 2 3 4)              <span class="c"># 终端 C</span>
+scripts/run.sh w2-group -url http://127.0.0.1:8080/api/enroll -body "$B" -rates "$RATES"</code></pre>
+            </figure>
+          </li>
+          <li>
+            <p><strong>W3：<code>-sync interval</code></strong>，作为对照，只运行三个阶段：</p>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>rm -f data/enroll.log; taskset -c 1 bin/enrolld -sync interval  <span class="c"># 终端 A</span></code></pre>
+            </figure>
+            <figure class="code">
+              <figcaption><span>bash</span><button class="copy" type="button" aria-label="复制这段代码">复制</button>
+              </figcaption>
+              <pre><code>RATES=$(scripts/rates.sh 327 0.4 1.5 4)                          <span class="c"># 终端 C</span>
+scripts/run.sh w3-interval -url http://127.0.0.1:8080/api/enroll -body "$B" -rates "$RATES"</code></pre>
+            </figure>
+            <p>interval 模式下，返回“选课成功”时记录仍在页缓存中。机器掉电时，最近 1 秒内已确认的记录将丢失。本实验不模拟掉电，只在分析中讨论这一代价。</p>
+          </li>
+        </ol>
+        <div class="checkpoint"><span class="label">检查点</span>
+          <p>W1、W2、W3 三次实验的数据齐全；第 5.1、5.3 节已写预测；<code>LAB2.md</code> 第 5 节的表格都已粘贴。</p>
+        </div>
+        <h3 id="task-4">任务 4：数据与分析<span class="badge">约 120 分钟</span><a class="anchor" href="#task-4"
+            aria-label="链接到本节">#</a></h3>
+        <p>回答 <code>LAB2.md</code> 第 6 节的四个问题：上限由什么决定；利用率不等于饱和；持久性以延迟为代价；延迟数值的测量位置与方法。必须使用本组的数据作答，引用具体的表或文件，并写明结论的成立条件。
+        </p>
+        <p>分析时如需其他查询，可加入查询文件，再用 <code>scripts/requery.sh runs/&lt;名字&gt;</code> 重新生成
+          <code>red.csv</code>、<code>use.csv</code>。Prometheus 的数据位于 <code>/dev/shm</code>，Prometheus 或主机重启后即丢失，因此停止
+          Prometheus 之前先确认不再需要重新查询。</p>
+        <p>最后将 <code>runs/</code> 下所有被 <code>LAB2.md</code> 引用的目录、修改后的 <code>deploy/queries-red.txt</code> 和
+          <code>LAB2.md</code> 一并提交。不要提交
+          <code>bin/</code>、<code>tools/</code>、<code>data/</code>，<code>.gitignore</code> 已将其排除。</p>
+        <h2 id="s5"><span class="sec-num">5</span>选做<a class="anchor" href="#s5" aria-label="链接到本节">#</a></h2>
+        <p>选做不影响必做部分的评分，仅用于加分，上限见第 7 节。每项都须先写下预期，再进行测量。</p>
+        <ul>
+          <li>O1 内存与 GC：<code>GET /api/report?mb=4</code> 每个请求分配 4 MB 临时内存。在同一到达率（例如 100 请求/秒）下分别运行
+            <code>GOGC=100</code> 和 <code>GOGC=400</code>（启动 enrolld 时设置环境变量，例如
+            <code>GOGC=400 taskset -c 1 bin/enrolld</code>），比较
+            <code>go_gc_cycles_total</code>、<code>go_gc_cpu_seconds_total</code>
+            的增量、<code>process_resident_memory_bytes</code> 和 p99。说明其中以什么代价换取了什么，并联系 L-06 第 12 页 JVM 的堆与 GC。</li>
+          <li>O2 网络：需要第二台主机，两台位于同一 VPC。主机 A 用 <code>-addr 0.0.0.0:8080</code> 启动 enrolld，安全组只对主机 B 的内网地址放通 8080；在主机 B 上用
+            loadgen 请求 <code>/api/export?kb=256</code>，逐步加压。在主机 A 上用 <code>sar -n DEV 1</code> 观察 txkB/s，用
+            <code>ss -tin</code> 观察重传，按 L-07 第 19 页计算带宽需求，找出该主机的带宽上限。<code>run.sh</code> 要求 loadgen 与 enrolld 在同一台主机上，因此
+            O2 请直接运行 loadgen，并在主机 A 上自行记录 sar 的输出。完成后关闭放通的端口。</li>
+          <li>O3 告警与看板：为读路径的 SLO 编写一条基于燃烧率的 Prometheus 告警规则（L-08 第 21 页），放在 <code>deploy/rules.yml</code>，并在
+            <code>prometheus.yml</code> 中用 <code>rule_files</code> 引用；通过一次过载使其触发，从 <code>/api/v1/alerts</code> 获取触发记录。再按
+            L-08 第 29 页的“三行九格”，在 Prometheus 界面或 Grafana 中为 enrolld 搭建一张看板，说明每一格使用的查询。</li>
+          <li>O4 迁移到小组项目：为本组的项目加入 RED 三项指标（可参考 <code>internal/metrics/</code>），测出一种资源的上限，按 L-07 的格式写一行资源账。</li>
+        </ul>
+        <h2 id="s6"><span class="sec-num">6</span>常见问题<a class="anchor" href="#s6" aria-label="链接到本节">#</a></h2>
+        <div class="tablewrap">
+          <table class="wide-first">
+            <thead>
+              <tr>
+                <th>现象</th>
+                <th>原因与处理</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Prometheus 启动时报 9090 端口被占用</td>
+                <td>部分系统默认安装了 Cockpit，它同样使用 9090。更换端口（例如 <code>--web.listen-address=127.0.0.1:19090</code>），并设置
+                  <code>export PROM=http://127.0.0.1:19090</code></td>
+              </tr>
+              <tr>
+                <td class="nw">抓取目标是 down</td>
+                <td>enrolld 或 node_exporter 未运行，或端口不正确。先执行
+                  <code>curl -s 127.0.0.1:8080/metrics | head</code>、<code>curl -s 127.0.0.1:9100/metrics | head</code>
+                </td>
+              </tr>
+              <tr>
+                <td><code>red.csv</code>、<code>use.csv</code> 整列为空</td>
+                <td>Prometheus 曾重启（数据位于 <code>/dev/shm</code>，重启即丢失），或阶段过短。阶段至少 30 秒</td>
+              </tr>
+              <tr>
+                <td><code>promsteps</code> 报“返回了 N 条序列”</td>
+                <td>查询未聚合为一条序列，使用 <code>sum(...)</code>；直方图先 <code>sum by (le)</code></td>
+              </tr>
+              <tr>
+                <td><code>steps.csv</code> 的 <code>warn</code> 列有“发送滞后”或“压测机 CPU”</td>
+                <td>loadgen 未能按计划发送，该阶段的客户端延迟不可信。检查 <code>GEN_CPUS</code> 的核是否被其他程序占用；若出现在过载阶段，在分析中说明</td>
+              </tr>
+              <tr>
+                <td class="nw">后续几个阶段未运行</td>
+                <td>某个阶段成功返回的请求不足一半，loadgen 主动停止（<code>-stop-below</code>）。此时服务已过载，这正是要寻找的上限</td>
+              </tr>
+              <tr>
+                <td><code>taskset: failed to set pid … affinity</code></td>
+                <td>核编号超出主机范围，按 <code>lscpu -e</code> 修改</td>
+              </tr>
+              <tr>
+                <td>fsync 平均耗时不到 0.3 ms</td>
+                <td>本地 NVMe，或磁盘带有掉电保护的写缓存。W1 可能先达到 CPU 上限，组提交也就没有帮助。如实记录，并在分析中说明</td>
+              </tr>
+              <tr>
+                <td>同一组参数两次结果差异很大</td>
+                <td>云主机存在邻居干扰，部分规格还有 CPU 积分限制（突发性能型、共享型）。查看 <code>cpu_steal</code>，并确认主机规格；需要比较的两次实验应尽量连续进行</td>
+              </tr>
+              <tr>
+                <td>出现 <code>cannot assign requested address</code></td>
+                <td>本机临时端口被大量 TIME_WAIT 连接占满，多见于严重过载之后。等待一分钟后再运行，或降低最高到达率</td>
+              </tr>
+              <tr>
+                <td><code>go: downloading go1.26…</code> 后超时</td>
+                <td>本地 Go 低于 1.26，见实验 1 指导书第 2 节</td>
+              </tr>
+              <tr>
+                <td>enrolld 警告 <code>data</code> 位于 tmpfs</td>
+                <td>改用磁盘上的目录：<code>mkdir -p /var/tmp/lab2-data</code>，启动 enrolld 时加
+                  <code>-data /var/tmp/lab2-data</code>，运行实验时设置 <code>DATA=/var/tmp/lab2-data</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h2 id="s7"><span class="sec-num">7</span>提交与评分<a class="anchor" href="#s7" aria-label="链接到本节">#</a></h2>
+        <p><strong>提交内容：</strong> 小组仓库的地址，以及用于评分的提交的完整提交号（40 位）；按已公布的组号规则写明组号，提交渠道另行通知。截止时刻 2026-10-23 23:59
+          之前提交的提交号有效，评分只依据该提交中的内容。仓库须保持公开，成绩公布之前不要删除。</p>
+        <p><strong>现场检查：</strong> 安排在截止之后的课外时间，每组约 20 分钟，具体时间另行通知。检查以各组提交的提交号为准，并需使用各组的实验主机，因此检查结束之前不要释放主机，也不要删除
+          <code>bin/</code>、<code>tools/</code>。</p>
+        <ol>
+          <li>打开 <code>LAB2.md</code>，老师按其中的表格到 <code>runs/</code> 中抽查若干数值的出处。</li>
+          <li>在各组的主机上，按老师指定实验的 <code>meta.txt</code> 中的参数重启 enrolld，用 <code>scripts/run.sh</code>
+            换一个名字重新运行其中一两个阶段。重新运行的结果应与提交的数据处于同一量级；云主机前后相差 10%～20% 属于正常，能说明原因即可。</li>
+          <li>讲解一次实验的数据：老师指定一张表，说明每一列的测量位置及其含义。</li>
+          <li>回答两个追问及老师的随机提问，内容围绕本组完成的步骤和第 6 节的分析，由老师指定组员回答。追问用于确认实验和分析由小组独立完成；无法回答的，对应的分析题酌情扣分。</li>
+        </ol>
+        <p><code>LAB2.md</code> 和 <code>runs/</code> 中不得包含密码、密钥和主机的公网 IP。</p>
+        <p><strong>评分：</strong> 满分 100 分，选做最多加 10 分，总分超过 100 分的按 100 分计。</p>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr>
+                <th>项</th>
+                <th>分值</th>
+                <th>依据</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="nw">A 环境与基线</td>
+                <td class="nw">10</td>
+                <td>主机信息完整；三次 fsync 测试；空载与 fsync 测试时的工具读数，并说明各列的含义</td>
+              </tr>
+              <tr>
+                <td class="nw">B 指标流水线</td>
+                <td class="nw">15</td>
+                <td>三条 RED 查询和 <code>server_slo_good</code> 正确（以 <code>deploy/queries-red.txt</code> 和
+                  <code>red.csv</code> 的数值为准）；<code>t1-light</code> 的数据完整；第 3 节给出了每次查询的占用时间和每请求 CPU</td>
+              </tr>
+              <tr>
+                <td class="nw">C 读路径</td>
+                <td class="nw">25</td>
+                <td>测量之前写了预测，并与实测对照；R1、R2 均超过了各自的上限；P2 的计算正确；给出 pprof 结果和每请求 CPU 的拆分；正确指出两次实验中各是哪个资源先达到上限</td>
+              </tr>
+              <tr>
+                <td class="nw">D 写路径与复测</td>
+                <td class="nw">20</td>
+                <td>测量之前写了预测，并与实测对照；W1、W2、W3 的数据完整，W1 与 W2 的条件可比；有组提交前后的对照</td>
+              </tr>
+              <tr>
+                <td class="nw">E 记录与分析</td>
+                <td class="nw">30</td>
+                <td>数据 6 分：<code>LAB2.md</code> 中的数值均能在 <code>runs/</code> 中找到，客户端、服务端和原始日志相互一致。问题 1～4 各 6
+                  分：判断准确，使用本组数据，阐明机制，写明成立条件</td>
+              </tr>
+              <tr>
+                <td class="nw">选做</td>
+                <td class="nw">≤ 10</td>
+                <td>O1、O2、O4 各至多 3 分，O3 至多 4 分</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>硬性要求：</p>
+        <div class="tablewrap">
+          <table class="wide-first">
+            <thead>
+              <tr>
+                <th>要求</th>
+                <th>达不到时</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>评分用的提交在截止前提交，仓库公开</td>
+                <td>无法核对，所有评分项都不得分</td>
+              </tr>
+              <tr>
+                <td><code>LAB2.md</code> 中的数值均能在 <code>runs/</code> 的文件中找到</td>
+                <td>找不到出处的数值视为缺少该项数据，其所支撑的评分项不得分</td>
+              </tr>
+              <tr>
+                <td><code>runs/</code> 中的文件是 <code>scripts/run.sh</code>
+                  生成的原始输出（<code>red.csv</code>、<code>use.csv</code> 可由 <code>scripts/requery.sh</code> 重新生成）</td>
+                <td>数据经过修改的，对应的评分项不得分</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <h2 id="s8"><span class="sec-num">8</span>恢复与清理<a class="anchor" href="#s8" aria-label="链接到本节">#</a></h2>
+        <p>现场检查需在各组的主机上重新运行实验，因此以下清理在检查结束后进行；检查之前只需停止进程。</p>
+        <ul>
+          <li>停止进程：在终端 A、B 按 Ctrl-C；后台的 node_exporter 用 <code>pkill -x node_exporter</code> 停止。然后用
+            <code>pgrep -a 'enrolld|prometheus|node_exporter|loadgen'</code> 确认均已停止。</li>
+          <li>删除 Prometheus 数据：<code>rm -rf /dev/shm/lab2-prom</code>。删除前先确认任务 4 所需的查询结果均已存入 CSV。</li>
+          <li>删除写路径数据：<code>rm -rf data/</code>（其中还包含 node_exporter 的日志）。</li>
+          <li>完成 O2 的组：完成后立即删除安全组中为 8080 添加的规则，无需等待检查。</li>
+          <li>关闭 SSH 隧道。<code>tools/</code> 可以删除，需要时再运行 <code>scripts/get-tools.sh</code>。</li>
+          <li><code>runs/</code> 和仓库保留到成绩公布。</li>
+        </ul>
+        <h2 id="s9"><span class="sec-num">9</span>测量与局限<a class="anchor" href="#s9" aria-label="链接到本节">#</a></h2>
+        <ul>
+          <li>单机模式：loadgen 与 enrolld 共享内核、内存带宽和末级缓存，绑核只能减少二者对 CPU 的争用。请求经回环地址发送，不经过网卡，因此网络开销被低估；网络方面的结论需依靠 O2。</li>
+          <li>云主机的 CPU 和磁盘都受邻居干扰。同一台主机在不同时间测量，相差 10% 以上很常见。需要比较的两次实验应连续进行，结论中写明测量所用的主机。</li>
+          <li>每请求 CPU 不是常数。低负载时，运行时唤醒、缓存失效和 CPU 节能状态的开销分摊到少数请求上，因此单个请求的开销显得更高。用低负载数据推算上限会偏保守，问题 1 需讨论这一点。</li>
+          <li>30 秒的阶段在 50 请求/秒时只有 1500 个样本，p99 仅取决于最慢的 15 个请求，因此低速率阶段的 p99 噪声很大。</li>
+          <li>服务端 p99 由直方图插值得到，精度受桶宽限制；<code>inflight_avg</code>、<code>pool_in_use_avg</code> 是每秒采样一次后取平均，一个阶段约 25
+            个样本，仍存在抽样误差，在途数较小时尤为明显。</li>
+          <li>客户端延迟从计划发送时刻算起，包含约 1 ms 的发送滞后（见 <code>lag_p99_ms</code>）。</li>
+          <li>模拟数据库只模拟“占用连接的时间”，不模拟数据库自身的 CPU、锁和 I/O。在真实系统中，连接池调大后数据库会变慢（L-06 第 19 页），本实验观察不到这一现象。</li>
+          <li>fsync 耗时取决于磁盘类型与规格、文件系统和挂载参数。云盘性能通常与容量、规格挂钩。</li>
+          <li>enrolld 用 Go 编写：GOMAXPROCS 跟随绑核数，CPU 不足时排队发生在 Go 运行时中。若换成 Java 或 Node.js，CPU 饱和在内核指标上的表现会有所不同（L-06 第 13、14
+            页）。</li>
+        </ul>
+        <h2 id="s10"><span class="sec-num">10</span>参考资料<a class="anchor" href="#s10" aria-label="链接到本节">#</a></h2>
+        <ul>
+          <li>L-06 第 16～19、30～33 页；L-07 第 5～7、9、13～16、22、24～27 页；L-08 第 5、6、10、13、19～22、24～26、28、29 页。</li>
+          <li>B. Gregg, Systems Performance, 2nd ed. (2020), Ch. 2、6、9；The USE Method（brendangregg.com）。</li>
+          <li>T. Wilkie, The RED Method (2015)。</li>
+          <li>Google SRE Book, Ch. 4、6；SRE Workbook, Ch. 2、5。</li>
+          <li>Prometheus 文档：Data model；Metric types；Histograms and summaries；Querying basics；Exposition
+            formats；Prometheus 3.0 migration guide（<code>le</code> 标签的规范化）；Long-term support。</li>
+          <li>node_exporter 的 README；Linux 内核文档 PSI（Pressure Stall Information）；man
+            pages：vmstat(8)、mpstat(1)、iostat(1)、pidstat(1)、fsync(2)、taskset(1)。</li>
+          <li>Go 文档：runtime/metrics（<code>/sched/latencies:seconds</code>）；net/http/pprof。</li>
+          <li>G. Tene, How NOT to Measure Latency（关于闭环压测与“协调遗漏”）。</li>
+          <li>MySQL 8.4 Reference Manual：<code>innodb_flush_log_at_trx_commit</code>。</li>
+        </ul>
+      </main>
+    </div>
+    <footer>
+      <span>互联网产品开发与运维（2026 秋季） · 实验 2</span>
+      <span>本页由 guide.md 生成，内容以课程平台发布的版本为准</span>
+    </footer>
+  </div>
+  <script>
+    (function () {
+      "use strict";
+
+      // 窄屏时目录默认折叠
+      var toc = document.querySelector("details.toc-wrap");
+      if (toc && window.matchMedia("(max-width: 979px)").matches) { toc.removeAttribute("open"); }
+
+      // 代码块复制
+      function fallbackCopy(text) {
+        var ta = document.createElement("textarea");
+        ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        var ok = false;
+        try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+        document.body.removeChild(ta);
+        return ok;
+      }
+      Array.prototype.forEach.call(document.querySelectorAll("figure.code .copy"), function (btn) {
+        btn.addEventListener("click", function () {
+          var code = btn.closest("figure").querySelector("code");
+          var text = code.textContent;
+          var done = function (ok) {
+            btn.textContent = ok ? "已复制" : "复制失败";
+            btn.classList.toggle("done", ok);
+            setTimeout(function () { btn.textContent = "复制"; btn.classList.remove("done"); }, 1600);
+          };
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(fallbackCopy(text)); });
+          } else { done(fallbackCopy(text)); }
+        });
+      });
+
+      // 目录跟随滚动高亮
+      var links = {};
+      Array.prototype.forEach.call(document.querySelectorAll(".toc a"), function (a) {
+        links[decodeURIComponent(a.getAttribute("href").slice(1))] = a;
+      });
+      var heads = Array.prototype.slice.call(document.querySelectorAll("main h2[id], main h3[id]"));
+      var ticking = false;
+      function update() {
+        ticking = false;
+        var y = 90, current = null;
+        for (var i = 0; i < heads.length; i++) {
+          if (heads[i].getBoundingClientRect().top <= y) { current = heads[i]; } else { break; }
+        }
+        if (!current && heads.length) { current = heads[0]; }
+        Object.keys(links).forEach(function (id) {
+          var on = current && current.id === id;
+          links[id].classList.toggle("active", !!on);
+          if (on) { links[id].setAttribute("aria-current", "location"); } else { links[id].removeAttribute("aria-current"); }
+        });
+      }
+      window.addEventListener("scroll", function () {
+        if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+      }, { passive: true });
+      window.addEventListener("resize", update);
+      update();
+    })();
+  </script>
+</body>
+
+</html>
