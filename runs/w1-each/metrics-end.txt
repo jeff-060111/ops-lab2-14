@@ -1,0 +1,154 @@
+# HELP enrolld_info 服务参数，值恒为 1；参数在标签里
+# TYPE enrolld_info gauge
+enrolld_info{work="200000",pool="4",db_ms="10",sync="each",go_version="go1.26.9"} 1
+# HELP http_requests_total 处理完的请求数，按接口和状态码分
+# TYPE http_requests_total counter
+http_requests_total{route="/api/enroll",code="200"} 120133
+# HELP http_request_duration_seconds 服务端耗时：从进入处理函数到处理函数返回（不含内核里的排队和网络）
+# TYPE http_request_duration_seconds histogram
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="0.001"} 69
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="0.002"} 23759
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="0.005"} 46688
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="0.01"} 59386
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="0.02"} 67086
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="0.05"} 73007
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="0.1"} 74424
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="0.2"} 74816
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="0.5"} 78478
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="1"} 82963
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="2"} 88419
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="5"} 101521
+http_request_duration_seconds_bucket{route="/api/enroll",code="200",le="+Inf"} 120133
+http_request_duration_seconds_sum{route="/api/enroll",code="200"} 208651.73249625487
+http_request_duration_seconds_count{route="/api/enroll",code="200"} 120133
+# HELP http_inflight_requests 正在处理的请求数（在途）
+# TYPE http_inflight_requests gauge
+http_inflight_requests{route="/api/courses/{id}"} 0
+http_inflight_requests{route="/api/enroll"} 7406
+http_inflight_requests{route="/api/export"} 0
+http_inflight_requests{route="/api/report"} 0
+# HELP enroll_commits_total 已确认落盘方式完成、返回给客户端的选课记录数
+# TYPE enroll_commits_total counter
+enroll_commits_total 120133
+# HELP db_pool_size 连接池大小
+# TYPE db_pool_size gauge
+db_pool_size 4
+# HELP db_pool_in_use 正在被查询占用的连接数
+# TYPE db_pool_in_use gauge
+db_pool_in_use 0
+# HELP db_pool_wait_seconds 等到一个空闲连接花的时间（含等待超时的请求）
+# TYPE db_pool_wait_seconds histogram
+db_pool_wait_seconds_bucket{le="0.001"} 0
+db_pool_wait_seconds_bucket{le="0.002"} 0
+db_pool_wait_seconds_bucket{le="0.005"} 0
+db_pool_wait_seconds_bucket{le="0.01"} 0
+db_pool_wait_seconds_bucket{le="0.02"} 0
+db_pool_wait_seconds_bucket{le="0.05"} 0
+db_pool_wait_seconds_bucket{le="0.1"} 0
+db_pool_wait_seconds_bucket{le="0.2"} 0
+db_pool_wait_seconds_bucket{le="0.5"} 0
+db_pool_wait_seconds_bucket{le="1"} 0
+db_pool_wait_seconds_bucket{le="2"} 0
+db_pool_wait_seconds_bucket{le="5"} 0
+db_pool_wait_seconds_bucket{le="+Inf"} 0
+db_pool_wait_seconds_sum 0
+db_pool_wait_seconds_count 0
+# HELP db_query_duration_seconds 拿到连接以后查询本身占用连接的时间
+# TYPE db_query_duration_seconds histogram
+db_query_duration_seconds_bucket{le="0.001"} 0
+db_query_duration_seconds_bucket{le="0.002"} 0
+db_query_duration_seconds_bucket{le="0.005"} 0
+db_query_duration_seconds_bucket{le="0.01"} 0
+db_query_duration_seconds_bucket{le="0.02"} 0
+db_query_duration_seconds_bucket{le="0.05"} 0
+db_query_duration_seconds_bucket{le="0.1"} 0
+db_query_duration_seconds_bucket{le="0.2"} 0
+db_query_duration_seconds_bucket{le="0.5"} 0
+db_query_duration_seconds_bucket{le="1"} 0
+db_query_duration_seconds_bucket{le="2"} 0
+db_query_duration_seconds_bucket{le="5"} 0
+db_query_duration_seconds_bucket{le="+Inf"} 0
+db_query_duration_seconds_sum 0
+db_query_duration_seconds_count 0
+# HELP enroll_fsync_duration_seconds 每次 fsync 的耗时（应用自己量的）
+# TYPE enroll_fsync_duration_seconds histogram
+enroll_fsync_duration_seconds_bucket{le="0.0001"} 0
+enroll_fsync_duration_seconds_bucket{le="0.0002"} 0
+enroll_fsync_duration_seconds_bucket{le="0.0005"} 0
+enroll_fsync_duration_seconds_bucket{le="0.001"} 4075
+enroll_fsync_duration_seconds_bucket{le="0.002"} 114909
+enroll_fsync_duration_seconds_bucket{le="0.005"} 119794
+enroll_fsync_duration_seconds_bucket{le="0.01"} 120051
+enroll_fsync_duration_seconds_bucket{le="0.02"} 120133
+enroll_fsync_duration_seconds_bucket{le="0.05"} 120133
+enroll_fsync_duration_seconds_bucket{le="0.1"} 120133
+enroll_fsync_duration_seconds_bucket{le="0.2"} 120133
+enroll_fsync_duration_seconds_bucket{le="0.5"} 120133
+enroll_fsync_duration_seconds_bucket{le="+Inf"} 120133
+enroll_fsync_duration_seconds_sum 155.74677066899883
+enroll_fsync_duration_seconds_count 120133
+# HELP enroll_commit_batch_size 每次 fsync 落盘的记录条数
+# TYPE enroll_commit_batch_size histogram
+enroll_commit_batch_size_bucket{le="1"} 120133
+enroll_commit_batch_size_bucket{le="2"} 120133
+enroll_commit_batch_size_bucket{le="4"} 120133
+enroll_commit_batch_size_bucket{le="8"} 120133
+enroll_commit_batch_size_bucket{le="16"} 120133
+enroll_commit_batch_size_bucket{le="32"} 120133
+enroll_commit_batch_size_bucket{le="64"} 120133
+enroll_commit_batch_size_bucket{le="128"} 120133
+enroll_commit_batch_size_bucket{le="256"} 120133
+enroll_commit_batch_size_bucket{le="512"} 120133
+enroll_commit_batch_size_bucket{le="1024"} 120133
+enroll_commit_batch_size_bucket{le="+Inf"} 120133
+enroll_commit_batch_size_sum 120133
+enroll_commit_batch_size_count 120133
+# HELP process_cpu_seconds_total 进程累计用掉的 CPU 时间（user + system，秒）
+# TYPE process_cpu_seconds_total counter
+process_cpu_seconds_total 18.813375999999998
+# HELP process_resident_memory_bytes 进程真正占用的物理内存 RSS（字节）
+# TYPE process_resident_memory_bytes gauge
+process_resident_memory_bytes 2.76926464e+08
+# HELP process_open_fds 打开的文件描述符数（含连接）
+# TYPE process_open_fds gauge
+process_open_fds 7416
+# HELP process_threads 操作系统线程数
+# TYPE process_threads gauge
+process_threads 9
+# HELP process_cpu_wait_seconds_total 进程的线程在运行队列里等 CPU 的累计时间（秒），取自各线程的 /proc/self/task/*/schedstat；它的速率是平均有几个线程在等核，是 CPU 饱和的直接证据
+# TYPE process_cpu_wait_seconds_total counter
+process_cpu_wait_seconds_total 2.0850625889999996
+# HELP go_goroutines goroutine 数
+# TYPE go_goroutines gauge
+go_goroutines 7410
+# HELP go_gomaxprocs Go 同时用来执行代码的线程数上限（受 taskset 和 cgroup 的 CPU 限制影响）
+# TYPE go_gomaxprocs gauge
+go_gomaxprocs 2
+# HELP go_gc_cycles_total 完成的 GC 次数
+# TYPE go_gc_cycles_total counter
+go_gc_cycles_total 151
+# HELP go_sched_latencies_seconds goroutine 可以运行但在等执行线程（等 CPU）的时间；运行时的桶比这里细，换算时整桶归入不小于它上沿的那个桶，_sum 按每个桶的下沿估计
+# TYPE go_sched_latencies_seconds histogram
+go_sched_latencies_seconds_bucket{le="1e-05"} 87383
+go_sched_latencies_seconds_bucket{le="5e-05"} 109184
+go_sched_latencies_seconds_bucket{le="0.0001"} 110832
+go_sched_latencies_seconds_bucket{le="0.0005"} 110931
+go_sched_latencies_seconds_bucket{le="0.001"} 110936
+go_sched_latencies_seconds_bucket{le="0.002"} 110948
+go_sched_latencies_seconds_bucket{le="0.005"} 110952
+go_sched_latencies_seconds_bucket{le="0.01"} 110953
+go_sched_latencies_seconds_bucket{le="0.02"} 110953
+go_sched_latencies_seconds_bucket{le="0.05"} 110953
+go_sched_latencies_seconds_bucket{le="0.1"} 110953
+go_sched_latencies_seconds_bucket{le="0.2"} 110953
+go_sched_latencies_seconds_bucket{le="0.5"} 110953
+go_sched_latencies_seconds_bucket{le="1"} 110953
+go_sched_latencies_seconds_bucket{le="+Inf"} 110953
+go_sched_latencies_seconds_sum 0.7089759999999997
+go_sched_latencies_seconds_count 110953
+# HELP go_gc_cpu_seconds_total GC 用掉的 CPU 时间估计（秒）
+# TYPE go_gc_cpu_seconds_total counter
+go_gc_cpu_seconds_total 0.284848603
+# HELP go_heap_objects_bytes 堆上对象占用的字节数（含尚未回收的）
+# TYPE go_heap_objects_bytes gauge
+go_heap_objects_bytes 1.75219024e+08
