@@ -118,7 +118,7 @@ R1 的到达率（`scripts/rates.sh 381` 的输出）：76,152,229,267,305,343,3
 
 ### 4.2 R1：`-pool 4`
 
-`scripts/table.sh runs/r1-pool4-v2 ok_rps error_rate p99_ms server_p99_ms server_mean_ms inflight_avg cpu_ms_per_req pool_in_use_avg pool_wait_p99_ms sched_wait_p99_ms svc_cpu_busy procs_running_avg`：
+`scripts/table.sh runs/r1-pool4 ok_rps error_rate p99_ms server_p99_ms server_mean_ms inflight_avg cpu_ms_per_req pool_in_use_avg pool_wait_p99_ms sched_wait_p99_ms svc_cpu_busy procs_running_avg`：
 
 | step | target_rps | ok_rps | error_rate | p99_ms | server_p99_ms | server_mean_ms | inflight_avg | cpu_ms_per_req | pool_in_use_avg | pool_wait_p99_ms | sched_wait_p99_ms | svc_cpu_busy | procs_running_avg |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -139,7 +139,7 @@ R1 的到达率（`scripts/rates.sh 381` 的输出）：76,152,229,267,305,343,3
 
 ### 4.3 CPU 消耗在何处
 
-约 0.8 倍连接池上限对应 R1 第 5 阶段（目标 305 请求/秒）。该阶段 `runs/r1-pool4-v2/red.csv` 的 `cpu_ms_per_req` 为 **0.53982 ms/请求**，`cpu_cores` 为 **0.167367**。在相同目标到达率 305 请求/秒下额外加压 40 秒，中间采集 20 秒 CPU 剖析；`loadgen_exit=0`，pprof 共采得 2.97 秒 CPU 样本。`go tool pprof -top` 的前 10 行保存在 `runs/r1-pool4-v2/pprof-top.txt`：
+约 0.8 倍连接池上限对应 R1 第 5 阶段（目标 305 请求/秒）。该阶段 `runs/r1-pool4/red.csv` 的 `cpu_ms_per_req` 为 **0.53982 ms/请求**，`cpu_cores` 为 **0.167367**。在相同目标到达率 305 请求/秒下额外加压 40 秒，中间采集 20 秒 CPU 剖析；`loadgen_exit=0`，pprof 共采得 2.97 秒 CPU 样本。`go tool pprof -top` 的前 10 行保存在 `runs/r1-pool4/pprof-top.txt`：
 
 ```text
       flat  flat%   sum%        cum   cum%
@@ -161,7 +161,7 @@ R1 的到达率（`scripts/rates.sh 381` 的输出）：76,152,229,267,305,343,3
 
 | 项 | 值与算法 |
 |---|---|
-| 每个请求占用的 CPU（取 R1 哪一阶段的 `cpu_ms_per_req`，选取理由） | `runs/r1-pool4-v2/red.csv` 第 6 阶段的 **0.534371 ms/请求**。该阶段目标为 343 请求/秒，`ok_rps` 为 339.9、错误率为 0，尚未达到吞吐上限；在这些条件下它是负载最高的阶段。 |
+| 每个请求占用的 CPU（取 R1 哪一阶段的 `cpu_ms_per_req`，选取理由） | `runs/r1-pool4/red.csv` 第 6 阶段的 **0.534371 ms/请求**。该阶段目标为 343 请求/秒，`ok_rps` 为 339.9、错误率为 0，尚未达到吞吐上限；在这些条件下它是负载最高的阶段。 |
 | 推算的 CPU 上限 C | 2 核 ÷ 0.000534371 秒/请求 ≈ **3743 请求/秒** |
 | R2 的池大小 P2 = ceil(2 × C × 每次查询的秒数) | 第 6 阶段 `db_query_mean_ms` 为 10.4778 ms；P2 = ceil(2 × 3743 × 0.0104778) = **79**。对应连接池理论上限约 79 ÷ 0.0104778 ≈ 7540 请求/秒。 |
 | R2 的到达率（`scripts/rates.sh C 0.3 0.6 0.8 0.9 1.0 1.1 1.25 1.5`） | `scripts/rates.sh 3743 0.3 0.6 0.8 0.9 1.0 1.1 1.25 1.5` → **1123,2246,2994,3369,3743,4117,4679,5615** |
@@ -193,7 +193,7 @@ R1 的到达率（`scripts/rates.sh 381` 的输出）：76,152,229,267,305,343,3
 |---|---|
 | fsync 平均耗时（任务 0） | 第 2 节三次测试的 mean 分别为 1.192、1.176、1.161 ms，平均为 (1.192 + 1.176 + 1.161) / 3 ≈ **1.1763 ms**。 |
 | 推算的最大 TPS | 单个写者串行 fsync 的上限约为 1000 / 1.1763 ≈ **850 请求/秒**；压测以 850 为基准。 |
-| 达到上限时 enrolld 大约使用几个核（写路径没有 spin，按 4.3 节拆分出的“spin 以外的开销”估计每个写请求的 CPU） | `runs/r1-pool4-v2/red.csv` 第 5 阶段的每请求 CPU 为 0.53982 ms；`runs/r1-pool4-v2/pprof-top.txt` 中 main.spin 的 flat 占比为 83.84%。估计写请求 CPU 为 0.53982 × (1 − 0.8384) ≈ **0.0872 ms/请求**，在 850 TPS 时需 850 × 0.0872 / 1000 ≈ **0.074 核**，约占服务分配的 2 个逻辑核容量的 3.7%。 |
+| 达到上限时 enrolld 大约使用几个核（写路径没有 spin，按 4.3 节拆分出的“spin 以外的开销”估计每个写请求的 CPU） | `runs/r1-pool4/red.csv` 第 5 阶段的每请求 CPU 为 0.53982 ms；`runs/r1-pool4/pprof-top.txt` 中 main.spin 的 flat 占比为 83.84%。估计写请求 CPU 为 0.53982 × (1 − 0.8384) ≈ **0.0872 ms/请求**，在 850 TPS 时需 850 × 0.0872 / 1000 ≈ **0.074 核**，约占服务分配的 2 个逻辑核容量的 3.7%。 |
 | W1 的到达率（`scripts/rates.sh <最大 TPS> 0.2 0.4 0.6 0.8 0.9 1.0 1.1 1.2`） | `scripts/rates.sh 850 0.2 0.4 0.6 0.8 0.9 1.0 1.1 1.2` → **170,340,510,680,765,850,935,1020** 请求/秒。 |
 
 **预测：** 在与任务 0 相同的主机、磁盘和数据目录下，each 模式更可能先受到串行持久化路径限制，成功吞吐接近约 850 TPS 后增长受限，而 CPU 仍有较大余量。随着到达率接近或超过处理能力，预计请求排队、客户端 p99 上升，过载时可能出现超时或错误。fsync 次数与成功提交数在稳定阶段应大致同量级，平均批量应约为 1。
@@ -280,11 +280,11 @@ W1 的最高已测成功吞吐为 764.5/s，比事前估计 850/s 低约 10.1%�
 
 每题先列出所用数据（引用上面的表或 `runs/` 中的文件），再写结论，并说明结论的成立条件。每题 300～600 字。
 
-本节 R1 统一使用第 4.2 节的复测 `runs/r1-pool4-v2/`，R2 使用 `runs/r2-pool79/`，不混用旧 R1 数据。数值由本地已保存的 CSV 核算；每阶段 30 秒，服务端查询去掉开头 5 秒。实际绑核以各目录 `meta.txt` 为准：R1 的 loadgen 为 CPU 0，其余本节实验为 0-1；enrolld 均为 2-3、GOMAXPROCS=2。
+本节 R1 统一使用第 4.2 节的复测 `runs/r1-pool4/`，R2 使用 `runs/r2-pool79/`，不混用旧 R1 数据。数值由本地已保存的 CSV 核算；每阶段 30 秒，服务端查询去掉开头 5 秒。实际绑核以各目录 `meta.txt` 为准：R1 的 loadgen 为 CPU 0，其余本节实验为 0-1；enrolld 均为 2-3、GOMAXPROCS=2。
 
 **问题 1：上限由什么决定。** 按 L-07 第 25 页资源账的格式，为 enrolld 的读路径编制一份资源账：资源、每个请求占用（实测）、容量、推算的上限、实测的最大吞吐量、饱和观测项。预测与实测相差多少，差异来自何处？`cpu_ms_per_req` 随负载如何变化，原因是什么？这对“在低负载下测量每请求开销，再推算上限”的做法意味着什么？`db_query_mean_ms` 为什么大于 `-db-ms`？以“p99 ≤ 50 ms”为目标，R1 能承受的最大阶段相当于上限的多少比例？与 L-07 第 6 页“容量 = 上限 × 0.7”比较，为什么尚未达到上限延迟就已上升？R2 调大连接池后，瓶颈转移到了哪个资源？
 
-**数据：** 第 3、4.2、4.4 节；[T1 RED](runs/t1-light/red.csv)、[R1 客户端](runs/r1-pool4-v2/steps.csv)与[RED](runs/r1-pool4-v2/red.csv)、[R2 客户端](runs/r2-pool79/steps.csv)、[RED](runs/r2-pool79/red.csv)与[USE](runs/r2-pool79/use.csv)。资源账如下（吞吐单位：请求/秒）：
+**数据：** 第 3、4.2、4.4 节；[T1 RED](runs/t1-light/red.csv)、[R1 客户端](runs/r1-pool4/steps.csv)与[RED](runs/r1-pool4/red.csv)、[R2 客户端](runs/r2-pool79/steps.csv)、[RED](runs/r2-pool79/red.csv)与[USE](runs/r2-pool79/use.csv)。资源账如下（吞吐单位：请求/秒）：
 
 | 资源 | 每请求占用（实测） | 容量 | 推算上限 | 最大已测成功吞吐 | 饱和观测项 |
 |---|---|---|---|---|---|
@@ -299,7 +299,7 @@ W1 的最高已测成功吞吐为 764.5/s，比事前估计 850/s 低约 10.1%�
 
 **问题 2：利用率不等于饱和。** R1 达到上限时，enrolld 所在核的 CPU 利用率是多少？哪个数值最先表明资源已经饱和？R2 中 CPU 利用率接近 100% 时，内核层的 `procs_running_avg`、`cpu_psi_some`、`cpu_wait_threads` 和 Go 运行时层的 `sched_wait_p99_ms` 分别如何变化？为什么内核层几乎观察不到排队，排队发生在哪里？这与 L-06 第 16、17 页 Tomcat 的线程池有何相同之处？最后用 Little's Law 核对：从 R1 选取三个阶段，用 `server_rps × server_mean_ms` 计算在途请求数，并与 `inflight_avg` 比较；W 为什么必须用平均值而不能用 p99？哪个阶段不一致，原因是什么？
 
-**数据：** 第 4.2、4.4 节及 [R1 RED](runs/r1-pool4-v2/red.csv)、[USE](runs/r1-pool4-v2/use.csv)、[R2 RED](runs/r2-pool79/red.csv)、[USE](runs/r2-pool79/use.csv)。R2 从阶段 6 加压至阶段 8：
+**数据：** 第 4.2、4.4 节及 [R1 RED](runs/r1-pool4/red.csv)、[USE](runs/r1-pool4/use.csv)、[R2 RED](runs/r2-pool79/red.csv)、[USE](runs/r2-pool79/use.csv)。R2 从阶段 6 加压至阶段 8：
 
 | R2 阶段 | 服务核忙碌 | procs_running_avg（整机） | cpu_psi_some（整机） | cpu_wait_threads（服务进程） | sched_wait_p99_ms |
 |---|---:|---:|---:|---:|---:|
@@ -346,7 +346,7 @@ W3 在同目标 340/s 时 p99 为 each 的约 1/6.12；3400/s 时为 group 的�
 
 **问题 4：延迟数值的测量位置与方法。** 同一阶段中，客户端与服务端的平均值、p99 各相差多少？列出只计入客户端的时间组成。找出一个服务端 p99 大于客户端 p99 的阶段，并解释原因（L-08 第 10 页）。比较服务端的 `server_slo_good` 与客户端的 `slo_good`；若存在过载阶段，二者为何相差很大？SLI 应在何处测量（L-08 第 19 页）？用 R1 的 `steps.csv`，将各阶段的 p99 求平均，与 `all` 行的 p99 比较，说明百分位数为什么不能平均，以及正确的合并方法。最后计算错误预算：SLO 为“30 天内 99% 的读请求在 50 ms 内成功返回”，若 R1 中第一个不达标阶段的负载持续下去，燃烧率是多少，30 天的预算多久耗尽（L-08 第 21 页）？
 
-**数据：** [R1 steps.csv](runs/r1-pool4-v2/steps.csv)与[red.csv](runs/r1-pool4-v2/red.csv)，[R2 steps.csv](runs/r2-pool79/steps.csv)与[red.csv](runs/r2-pool79/red.csv)。计时与聚合见 [loadgen](cmd/loadgen/main.go)、[服务端埋点](cmd/enrolld/main.go)、[阶段查询](cmd/promsteps/main.go)及[RED 查询](deploy/queries-red.txt)。下表延迟单位为 ms，差值均为客户端减服务端：
+**数据：** [R1 steps.csv](runs/r1-pool4/steps.csv)与[red.csv](runs/r1-pool4/red.csv)，[R2 steps.csv](runs/r2-pool79/steps.csv)与[red.csv](runs/r2-pool79/red.csv)。计时与聚合见 [loadgen](cmd/loadgen/main.go)、[服务端埋点](cmd/enrolld/main.go)、[阶段查询](cmd/promsteps/main.go)及[RED 查询](deploy/queries-red.txt)。下表延迟单位为 ms，差值均为客户端减服务端：
 
 | 阶段 | 客户端 / 服务端均值 | 均值差 | 客户端 / 服务端 p99 | p99 差 | 客户端 / 服务端 SLI |
 |---|---:|---:|---:|---:|---:|
@@ -414,4 +414,8 @@ R1 九阶段 p99 的算术平均为 298.36 ms，all 行却为 1011.19 ms。分�
 
 | GitHub 用户名 | 负责的部分 |
 |---|---|
-| <用户名> | <填写> |
+| jeff-060111 | 第 1-2 节主机与基线；任务 1 指标流水线；第 4.1、4.4 节预测；R2 实验；选做 O2 |
+| Fancyyyf | 任务 2 读路径 R1 与 pprof CPU 拆分；第 4.2、4.3 节 |
+| stardustwang | 任务 3 写路径 W1/W2/W3；第 5 节；PR #2 合并；选做 O3 |
+| S1mon-Chen | 第 6 节分析问题四题；选做 O1 |
+| li-yuelang | 选做 O4 迁移到小组项目；第 7.1 节 |
