@@ -1,0 +1,35 @@
+实验: O2 网络（选做）
+时间: 2026-10-30 19:01:19 ~ 19:05:49 (GMT+8)，9 阶段 x 30s
+
+主机 A（被测）: ops-lab1-main
+  实例 ID: b63824c8-a5f6-4db2-b6c8-1d88fef7d301
+  规格: 4 vCPU / 8 GiB, 可用区3, Ubuntu 24.04
+  私有 IP: 192.168.0.109
+  公网 IP: 124.71.144.6 (全动态 BGP, 独享, 按流量计费, 20 Mbit/s)
+  CPU 分核: enrolld 绑 2-3（2 物理核 x 2 超线程）
+
+主机 B（压测）: ops-lab2
+  规格: 2 vCPU / 4 GiB, 可用区3, Ubuntu 24.04
+  私有 IP: 192.168.0.198
+  公网 IP: 123.60.63.99 (全动态 BGP, 按流量计费, 20 Mbit/s)
+
+网络: 同一 VPC vpc-ops-lab1 (192.168.0.0/16), 同一子网 subnet-fc55 (192.168.0.0/24)
+安全组: A 的入方向 TCP 8080 仅对 123.60.63.99/32 放通, 测量结束后删除
+
+服务启动: taskset -c 2-3 bin/enrolld -addr 0.0.0.0:8080
+  其余参数为程序默认: work=200000, pool=4, db-ms=10, sync=each
+  gomaxprocs=2（由 taskset 绑定 2 核后 Go 自动判定）
+
+压测: bin/loadgen -url 'http://124.71.144.6:8080/api/export?kb=256'
+  -rates 0,2,4,6,8,10,12,15,20 -step 30s -timeout 5s -slo 500ms -seed 1
+  到达过程 poisson
+
+采集:
+  sar -n DEV 1 > o2-sar.log          # A 上逐秒网卡计数
+  ss -tin dst 123.60.63.99 每 5 秒   # A 上 TCP 连接状态, 存为 o2-ss.log
+
+文件:
+  steps.csv     客户端逐阶段结果（loadgen -out，自主机 B）
+  o2-sar.log    A 的网卡逐秒计数
+  o2-ss.log     A 的 TCP 连接状态采样（含 cwnd/ssthresh/Send-Q/retrans/minrtt）
+  meta.txt      本文件
