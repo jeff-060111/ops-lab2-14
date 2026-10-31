@@ -1,0 +1,10 @@
+{
+  "cards": 9,
+  "error": "",
+  "metrics": 23,
+  "missing": [
+    "1-2-2"
+  ],
+  "status": "实验存档 · 告警状态取自过载 firing 快照：firing  |  enrolld: up · node: up  |  2026/10/31 20:18:05 — 20:31:08 (UTC+8)  |  实验末尾已恢复，详见 alerts-resolved.json",
+  "title": "enrolld · O3 告警与看板"
+}

@@ -1,0 +1,38 @@
+# O3 教学演练：30 天内，99% 的读请求 code=200 且服务端耗时 <=50ms。
+# burn = (1 - good / total) / (1 - 0.99)。失败与慢请求的并集只计一次。
+# 使用 1m/5m 双窗口、阈值 14.4、持续 30s；窗口为现场演练缩短，
+# 不声称是生产环境常用的 5m/1h、1h 消耗月预算 2% 的同一套规则。
+groups:
+  - name: enrolld-read-slo
+    interval: 5s
+    rules:
+      - record: enrolld:read_requests:rate1m
+        expr: sum by (job) (rate(http_request_duration_seconds_count{job="enrolld",route="/api/courses/{id}"}[1m]))
+      - record: enrolld:read_requests:rate5m
+        expr: sum by (job) (rate(http_request_duration_seconds_count{job="enrolld",route="/api/courses/{id}"}[5m]))
+      - record: enrolld:read_slo_burn:ratio1m
+        expr: |
+          clamp_min(1 - (
+            sum by (job) (rate(http_request_duration_seconds_bucket{job="enrolld",route="/api/courses/{id}",code="200",le="0.05"}[1m]))
+            or on (job) (0 * enrolld:read_requests:rate1m)
+          ) / enrolld:read_requests:rate1m, 0) / 0.01
+      - record: enrolld:read_slo_burn:ratio5m
+        expr: |
+          clamp_min(1 - (
+            sum by (job) (rate(http_request_duration_seconds_bucket{job="enrolld",route="/api/courses/{id}",code="200",le="0.05"}[5m]))
+            or on (job) (0 * enrolld:read_requests:rate5m)
+          ) / enrolld:read_requests:rate5m, 0) / 0.01
+      - alert: EnrolldReadSLOBurnRateHigh
+        expr: |
+          (enrolld:read_slo_burn:ratio5m > 14.4)
+          and on (job) (enrolld:read_slo_burn:ratio1m > 14.4)
+          and on (job) (enrolld:read_requests:rate1m > 1)
+          and on (job) (min by (job) (up{job="enrolld"}) == 1)
+        for: 30s
+        labels:
+          severity: warning
+          service: enrolld
+          route: /api/courses/{id}
+        annotations:
+          summary: enrolld 读路径 SLO 错误预算燃烧过快
+          description: '99% 的读请求应成功且在 50ms 内完成；1m 和 5m 燃烧率均超过 14.4 持续 30s，当前 5m 燃烧率为 {{ printf "%.2f" $value }}。先查 RED，再查连接池等待和 CPU。'

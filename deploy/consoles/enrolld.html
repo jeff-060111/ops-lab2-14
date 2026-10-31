@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>enrolld · O3 告警与看板</title>
+<style>
+:root{font-family:system-ui,-apple-system,"PingFang SC",sans-serif;color:#e5edf6;background:#0b1421;color-scheme:dark}*{box-sizing:border-box}body{margin:0;padding:24px 30px;max-width:1800px;margin-inline:auto}header{display:flex;justify-content:space-between;gap:24px;align-items:center}h1{font-size:26px;margin:4px 0 8px;letter-spacing:-.5px}.eyebrow{font-size:11px;letter-spacing:2px;color:#6acbbd}p{margin:5px 0;color:#96a7bc;font-size:12px;line-height:1.6}nav{display:flex;gap:10px;align-items:center}a{color:#7ccbc2;text-decoration:none}button,select{border:1px solid #34455b;background:#152235;color:#dfebf8;padding:7px 12px;border-radius:6px}button{cursor:pointer}#status{margin:18px 0 12px;padding:10px 14px;border:1px solid #2d4257;border-radius:7px;background:#132237;font-size:12px;line-height:1.6}.row{display:grid;grid-template-columns:100px repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}.row-label{padding-top:16px}.row-label strong{font-size:16px}.row-label span{display:block;margin-top:8px;font-size:11px;color:#8fa2b8;line-height:1.7}.card{border:1px solid #25374d;background:#111f30;border-radius:9px;padding:14px;min-width:0}h2{font-size:14px;margin:0 0 7px}.note{font-size:10px;min-height:32px;margin-bottom:8px;line-height:1.5}.metric{margin:8px 0}.metric-head{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:#9fb0c3}.metric-head b{font-variant-numeric:tabular-nums;font-size:12px;color:#d3f4ec}.chart{height:45px;width:100%;display:block;margin-top:2px}.axis{font-size:8px;fill:#8395aa}.tick{stroke:#23394e;stroke-width:1}.empty{font-size:10px;color:#7f92a9;height:45px;display:flex;align-items:center}.error{color:#ff8b8b}.times{font-size:9px;color:#738ba6;display:flex;justify-content:space-between}details{border-top:1px solid #223448;margin-top:8px;padding-top:7px;font-size:10px}summary{cursor:pointer;color:#8daabd}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:10px;color:#b8cadc}footer{margin-top:18px;color:#7c92aa;font-size:11px;line-height:1.8}.pill{border-radius:4px;padding:2px 5px;background:#263e55;color:#bad6ed}#error{color:#ff8b8b}.legend{font-size:9px;color:#8fa2b8}.graph{position:relative}@media(max-width:900px){body{padding:16px}.row{grid-template-columns:1fr}.row-label{display:flex;gap:16px}header{align-items:flex-start;flex-direction:column}.note{min-height:0}}
+</style>
+<header><div><div class="eyebrow">LAB 02 / OPTIONAL 03 · PROMETHEUS CONSOLE</div><h1>enrolld · 告警与看板</h1><p>业务 → 服务 → 资源 · L-08 三行九格 · 读路径：99% 成功且 ≤50ms</p></div><nav><select id="window" aria-label="时间范围"><option value="900">最近 15 分钟</option><option value="1800">最近 30 分钟</option><option value="3600">最近 1 小时</option></select><button id="refresh">刷新</button><a href="/alerts">告警 ↗</a></nav></header>
+<div id="status">正在加载 Prometheus 数据…</div><div id="error" role="alert"></div><main id="board"></main>
+<footer>每格可展开全部 PromQL。各条小图独立标注单位与纵轴，虚线为目标/阈值；悬停查看采样值。无流量、缺失指标或 NaN 显示“无数据”，不补成成功。<br>在线人数、完整选课流程、MySQL buffer pool、Kafka lag 未埋点；图中明确标注替代项。CPU 2–3 · 磁盘 vda · 网卡 eth0/lo · 窗口 1m（燃烧率另含 5m）。</footer>
+<script>
+'use strict';
+const embeddedSpec = null;
+const embeddedSnapshot = null;
+const colors=['#60d4be','#78aefa','#edb563','#df82b8'];
+const urlParams=new URLSearchParams(location.search);
+const allQueries=[];
+let spec, busy=false;
+const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e};
+const fmt=n=>Number.isFinite(n)?new Intl.NumberFormat('zh-CN',{maximumFractionDigits:2}).format(n):'无数据';
+const clock=t=>new Date(t*1000).toLocaleTimeString('zh-CN',{hour12:false,timeZone:'Asia/Shanghai'});
+async function api(path,params){const r=await fetch('/api/v1/'+path+'?'+new URLSearchParams(params),{signal:AbortSignal.timeout(20000)});if(!r.ok)throw Error('HTTP '+r.status);const j=await r.json();if(j.status!=='success')throw Error(j.error||'Prometheus 查询失败');return j;}
+function layout(){
+ for(const row of spec.rows){const r=el('section','row');const label=el('div','row-label');label.append(el('strong','',row.name),el('span','',row.question));r.append(label);
+  for(const card of row.cards){const box=el('article','card');box.append(el('h2','',card.title),el('p','note',card.note));
+   for(const q of card.queries){allQueries.push(q);const m=el('div','metric');m.id=q.id;const h=el('div','metric-head');h.append(el('span','',q.name+' · '+q.unit),el('b','','加载中'));m.append(h,el('div','graph'));box.append(m);}
+   const details=el('details');details.append(el('summary','','查看本格查询'));for(const q of card.queries){details.append(el('p','',q.name),el('pre','',q.expr));}box.append(details);r.append(box);
+  }document.getElementById('board').append(r);
+ }
+}
+function draw(q,response,start,end){
+ const node=document.getElementById(q.id), graph=node.querySelector('.graph');graph.replaceChildren();
+ const series=response.data.result.filter(s=>s.values?.some(v=>Number.isFinite(Number(v[1]))));
+ const latest=series.map(s=>Number(s.values[s.values.length-1][1]));
+ node.querySelector('b').textContent=latest.length?latest.map(fmt).join(' / '):'无数据';
+ if(!series.length){graph.append(el('div','empty','无数据 / 无流量'));return;}
+ const values=series.flatMap(s=>s.values.map(v=>Number(v[1]))).filter(Number.isFinite);
+ const lo=0,hi=Math.max(...values,q.target||0,0.001)*1.12;
+ const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 380 45');svg.setAttribute('preserveAspectRatio','none');svg.classList.add('chart');
+ function part(tag,attrs,text){const p=document.createElementNS(ns,tag);for(const [k,v]of Object.entries(attrs))p.setAttribute(k,v);if(text!==undefined)p.textContent=text;svg.append(p);return p;}
+ const x=t=>34+(t-start)/(end-start)*342,y=v=>37-(v-lo)/(hi-lo)*31;
+ part('line',{x1:34,x2:376,y1:37,y2:37,class:'tick'});part('text',{x:0,y:10,class:'axis'},fmt(hi));part('text',{x:0,y:38,class:'axis'},'0');
+ if(q.target!==undefined)part('line',{x1:34,x2:376,y1:y(q.target),y2:y(q.target),stroke:'#cc995c','stroke-dasharray':'4 4','stroke-width':.8});
+ series.forEach((s,i)=>{let d='',open=false;for(const [t,value]of s.values){const v=Number(value);if(!Number.isFinite(v)){open=false;continue;}d+=(open?'L':'M')+x(t).toFixed(1)+' '+y(v).toFixed(1)+' ';open=true;}part('path',{d,fill:'none',stroke:colors[i%colors.length],'stroke-width':1.6,'vector-effect':'non-scaling-stroke'});});
+ graph.append(svg);const times=el('div','times');times.append(el('span','',clock(start)),el('span','',clock(end)));graph.append(times);
+ if(series.length>1)graph.append(el('div','legend',series.map((s,i)=>(i+1)+': '+(s.metric.route||s.metric.device||s.metric.instance||'序列')+(s.metric.quantile?' '+s.metric.quantile:'')).join(' · ')));
+ svg.addEventListener('mousemove',event=>{const rect=svg.getBoundingClientRect();const t=start+Math.max(0,Math.min(1,((event.clientX-rect.left)/rect.width*380-34)/342))*(end-start);const texts=series.map(s=>{const p=s.values.reduce((a,b)=>Math.abs(b[0]-t)<Math.abs(a[0]-t)?b:a);return clock(p[0])+' '+fmt(Number(p[1]))+' '+q.unit;});svg.setAttribute('aria-label',texts.join('; '));let title=svg.querySelector('title');if(!title){title=document.createElementNS(ns,'title');svg.append(title);}title.textContent=texts.join('; ');});
+}
+async function refresh(){
+ if(busy)return;busy=true;document.getElementById('error').textContent='';
+ const end=embeddedSnapshot?.end||Number(urlParams.get('end'))||Date.now()/1000;
+ const start=embeddedSnapshot?.start||Number(urlParams.get('start'))||(end-Number(document.getElementById('window').value));
+ const errors=[];let index=0;
+ try{
+  async function worker(){while(index<allQueries.length){const q=allQueries[index++];try{const response=embeddedSnapshot?embeddedSnapshot.queries[q.id].response:await api('query_range',{query:q.expr,start,end,step:5});draw(q,response,start,end);}catch(e){errors.push(q.name+': '+e.message);document.getElementById(q.id).querySelector('b').textContent='查询失败';}}}
+  await Promise.all(Array.from({length:4},worker));
+  const alerts=embeddedSnapshot?.alerts||await api('alerts',{});const alert=alerts.data.alerts.find(a=>a.labels.alertname==='EnrolldReadSLOBurnRateHigh');
+  const targets=embeddedSnapshot?.targets||await api('targets',{});const health=targets.data.activeTargets.filter(t=>['enrolld','node'].includes(t.labels.job)).map(t=>t.labels.job+': '+t.health).join(' · ');
+  const state=alert?alert.state:'inactive';
+  document.getElementById('status').textContent=(embeddedSnapshot?'实验存档 · 告警状态取自过载 firing 快照':'实时查询 · 当前告警状态')+'：'+state+'  |  '+health+'  |  '+new Date(start*1000).toLocaleDateString('zh-CN',{timeZone:'Asia/Shanghai'})+' '+clock(start)+' — '+clock(end)+' (UTC+8)'+(embeddedSnapshot?'  |  实验末尾已恢复，详见 alerts-resolved.json':'  |  每 10 秒刷新');
+  if(errors.length)document.getElementById('error').textContent=errors.join('；');
+ }catch(e){document.getElementById('error').textContent=e.message;}finally{busy=false;}
+}
+async function init(){try{spec=embeddedSpec||await(await fetch('enrolld-queries.json')).json();layout();if(embeddedSnapshot){document.getElementById('window').disabled=true;document.querySelector('nav a').href='alerts-firing.json';}document.getElementById('refresh').onclick=refresh;document.getElementById('window').onchange=refresh;await refresh();if(!embeddedSnapshot)setInterval(refresh,10000);}catch(e){document.getElementById('error').textContent=e.message;}}
+init();
+</script>
+</html>

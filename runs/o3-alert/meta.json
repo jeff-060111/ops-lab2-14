@@ -1,0 +1,56 @@
+{
+  "started_utc": "2026-10-31T12:18:05.951906+00:00",
+  "phases": [
+    [
+      "baseline",
+      100,
+      300
+    ],
+    [
+      "overload",
+      600,
+      120
+    ],
+    [
+      "recovery",
+      100,
+      360
+    ]
+  ],
+  "config": {
+    "addr": "127.0.0.1:8080",
+    "work": 200000,
+    "pool": 4,
+    "db_ms": 10,
+    "pool_timeout": "1s",
+    "sync": "each",
+    "sync_interval": "1s",
+    "data": "data/o3",
+    "go_version": "go1.26.9",
+    "gomaxprocs": 2,
+    "gogc": "",
+    "pid": 2871273,
+    "started": "2026-10-31T20:18:03+08:00"
+  },
+  "slo": {
+    "target": 0.99,
+    "latency_seconds": 0.05,
+    "period": "30d"
+  },
+  "generator_cpus": "0-1",
+  "generator_seed": 1,
+  "service_affinity": "pid 2871273's current affinity list: 2,3",
+  "source_commit": "574d0eb4485a0a6613e74e4d53108fd414524bb8",
+  "sha256": {
+    "bin/enrolld": "e7c541f643c0976099a82cd0a1edafde83502c3d32f1f667b1879d9e12fc3e76",
+    "bin/loadgen": "823d680c9ef7ed1c0cbaeb8ce7890b942e52137a820e0e8c6577d72d3365d0ec",
+    "deploy/rules.yml": "dee4c064cd8525625aec5368f3f8f0018bc14a61b10885c73930fc8482b7932a",
+    "scripts/o3-experiment.py": "765e8a76dcaca733579c8755be6e5294f2c3083e6fcd62ee0dfe2efdc8179eb8"
+  },
+  "ended_utc": "2026-10-31T12:31:08.335432+00:00",
+  "observed_states": [
+    "firing",
+    "pending",
+    "resolved"
+  ]
+}

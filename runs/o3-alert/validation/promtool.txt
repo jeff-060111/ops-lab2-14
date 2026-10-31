@@ -1,0 +1,9 @@
+Checking deploy/prometheus.yml
+  SUCCESS: 1 rule files found
+ SUCCESS: deploy/prometheus.yml is valid prometheus config file syntax
+
+Checking deploy/rules.yml
+  SUCCESS: 5 rules found
+
+  SUCCESS
+

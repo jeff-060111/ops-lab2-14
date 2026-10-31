@@ -1,0 +1,29 @@
+{
+  "phase": "overload",
+  "started_utc": "2026-10-31T12:23:06.112573+00:00",
+  "command": [
+    "taskset",
+    "-c",
+    "0-1",
+    "bin/loadgen",
+    "-url",
+    "http://127.0.0.1:8080/api/courses/1",
+    "-rates",
+    "600",
+    "-step",
+    "120s",
+    "-slo",
+    "50ms",
+    "-arrival",
+    "poisson",
+    "-seed",
+    "1",
+    "-timeout",
+    "2s",
+    "-max-inflight",
+    "2000",
+    "-out",
+    "runs/o3-alert/overload-steps.csv"
+  ],
+  "ended_utc": "2026-10-31T12:25:08.170346+00:00"
+}

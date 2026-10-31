@@ -1,0 +1,29 @@
+{
+  "phase": "baseline",
+  "started_utc": "2026-10-31T12:18:05.979483+00:00",
+  "command": [
+    "taskset",
+    "-c",
+    "0-1",
+    "bin/loadgen",
+    "-url",
+    "http://127.0.0.1:8080/api/courses/1",
+    "-rates",
+    "100",
+    "-step",
+    "300s",
+    "-slo",
+    "50ms",
+    "-arrival",
+    "poisson",
+    "-seed",
+    "1",
+    "-timeout",
+    "2s",
+    "-max-inflight",
+    "2000",
+    "-out",
+    "runs/o3-alert/baseline-steps.csv"
+  ],
+  "ended_utc": "2026-10-31T12:23:06.110875+00:00"
+}

@@ -370,7 +370,7 @@ R1 九阶段 p99 的算术平均为 298.36 ms，all 行却为 1011.19 ms。分�
 |---|---|
 | O1 内存与 GC | <未做 / 预测、`runs/` 目录、结论> |
 | O2 网络 | 已完成：两台主机同 VPC，A 走 EIP 20 Mbit/s；带宽上限实测无错误最高 10.7 请求/秒、有效载荷 23.7 Mbit/s，预测 9~10；见 7.2 节与 `runs/o2-net/`。 |
-| O3 告警与看板 | <未做 / 规则文件、触发记录、看板说明> |
+| O3 告警与看板 | 已完成：读 SLO 双窗口燃烧率规则；真实过载 pending → firing → 恢复；Prometheus 三行九格看板。见第 7.3 节与 `runs/o3-alert/`。 |
 | O4 迁移到小组项目 | 已完成：PaperMate 加入 RED 并测量连接池上限；单连接池最高已测达标目标 325/s，四连接池 458/s。见下方 7.1 节、[完整 O4 报告](https://github.com/li-yuelang/SE26Project-05/blob/add6a84f7a402d79f899779dbc4746d2fdcd52ed/docs/O4.md)及[PR #96](https://github.com/li-yuelang/SE26Project-05/pull/96)。 |
 
 ### 7.1 O4：将 RED 与容量测量迁移到 PaperMate
@@ -482,6 +482,77 @@ R1 九阶段 p99 的算术平均为 298.36 ms，all 行却为 1011.19 ms。分�
 同一个服务、同一台主机，仅把响应体从几 KB 换成 256 KiB，瓶颈就从连接池移到了网络，容量相差 40 倍。这说明「这台机器能扛多少请求」不是服务的固有属性，而是**资源配比与请求形态共同决定**的结果；只测一种请求形态就宣布容量，会得出错误结论。
 
 **口径与成立条件：** 请求从 B 发往 A 的弹性公网 IP `124.71.144.6`，安全组仅对 B 的公网地址 `123.60.63.99/32` 放通 8080，测量结束后删除。`ss -tin` 的 `minrtt:1`（毫秒）说明同 VPC 内经 EIP 互访走的是内部路径、延迟是内网量级，但带宽仍受 EIP 的 20 Mbit/s 整形限制，这正是对外提供服务时的真实约束；若改用 A 的内网 IP 直连，测到的是 VPC 内网带宽，不代表对外服务能力，故未采用。上述上限只对 256 KiB 响应体成立：`上限 = 带宽 ÷ 每请求字节数`，响应体缩小一半，上限约翻倍。原始证据见 `runs/o2-net/`：`steps.csv`（客户端逐阶段）、`o2-sar.log`（网卡逐秒计数）、`o2-ss.log`（TCP 连接状态）。
+
+### 7.3 O3：告警与看板
+
+**实现与入口：** [告警规则](deploy/rules.yml) 已由 [Prometheus 配置](deploy/prometheus.yml) 的 `rule_files` 引用；云主机现有 Prometheus 已热加载，无需重启。九格看板通过原生 Console `/consoles/enrolld.html` 提供。可直接打开 [本次实验离线看板](runs/o3-alert/dashboard.html)，或查看 [触发时截图](runs/o3-alert/dashboard-firing.jpg)、[逐格完整 PromQL](docs/O3-queries.md)、[部署与复现步骤](docs/O3-reproduce.md)。
+
+**事前预测：** 见 [prediction.md](runs/o3-alert/prediction.md)，在开始发出实验请求前保存。沿用必做读路径：pool=4、db-ms=10、work=200000、pool-timeout=1s，服务绑 2-3，负载与监控绑 0-1；由基线连接持有时间 10.4886ms 预测池上限约 381/s。计划先 100/s 运行 300s，再 600/s 运行 120s，最后恢复 100/s 运行 360s；预计 40–90s 内触发、恢复低负载后 60–120s 内解除。
+
+**SLO 与燃烧率：** 为 O3 明确定义请求型目标：30 天内 99% 的读请求 `code="200"` 且服务端耗时 ≤50ms。达标事件使用恰好对应阈值的 `le="0.05"` 桶，分母为全部读请求 `_count`。
+
+```text
+SLI = rate(成功且 ≤50ms 的读请求) / rate(全部读请求)
+错误预算 = 1 - 0.99 = 0.01
+burn = (1 - SLI) / 0.01
+告警 = burn_1m > 14.4 AND burn_5m > 14.4，持续 30s
+附加门槛：短窗读请求速率 >1/s，enrolld 抓取正常
+```
+
+慢成功和失败统一构成坏事件，不重复计数。全部失败、尚无成功序列时，以已有总请求序列补出成功率 0；无流量时不把 NaN 伪装成 100% 达标。1m/5m 是教学短窗口，14.4 倍在恒定流量等假设下对应 30 天预算约 50 小时耗尽；不能把它说成生产 5m/1h 策略或已经测量了整月 SLO。这里只验证 Prometheus 告警状态，未配置 Alertmanager 或外部通知。
+
+**实测（2026-10-31，以下时间均 UTC+8）：**
+
+| 阶段 | 目标请求/秒 | 成功请求/秒 | HTTP 错误率 | 客户端 p99（ms） | 客户端 slo_good |
+|---|---:|---:|---:|---:|---:|
+| 基线 300s | 100 | 100.9 | 0.00% | 14.29 | 100.00% |
+| 过载 120s | 600 | 385.0 | 35.98% | 1012.40 | 0.04% |
+| 恢复 360s | 100 | 100.6 | 0.00% | 14.26 | 100.00% |
+
+数据分别来自 `runs/o3-alert/baseline-steps.csv`、`overload-steps.csv`、`recovery-steps.csv`；每段完整命令和时间见 `*-meta.json`。三段均没有超时、网络错误或 dropped 请求。
+
+| 观测 | 时间 | 原始证据 |
+|---|---|---|
+| 开始 600/s 过载 | 20:23:06 | `overload-meta.json`、`overload-steps.csv` |
+| 首次采到 pending | 20:23:18 | `alerts-pending.json`、`alerts-timeline.jsonl` |
+| 首次采到 firing | 20:23:48 | `alerts-firing.json` |
+| 恢复到 100/s | 20:25:08 | `recovery-meta.json` |
+| 首次采到已解除 | 20:26:08 | `alerts-resolved.json`（alerts 为空） |
+
+[触发记录](runs/o3-alert/alerts-firing.json) 的关键原文：
+
+```json
+{
+  "state": "firing",
+  "activeAt": "2026-10-31T12:23:16.616316969Z",
+  "value": "4.735762267192759e+01",
+  "labels": {
+    "alertname": "EnrolldReadSLOBurnRateHigh",
+    "job": "enrolld",
+    "route": "/api/courses/{id}",
+    "service": "enrolld",
+    "severity": "warning"
+  }
+}
+```
+
+采到 firing 时 5m 燃烧率为 **47.3576 倍**。`activeAt` 是开始 pending 的时间（20:23:16），不是 firing 时间；轮询每 2s 一次、规则每 5s 评估，因此表内是 API 观测时间。触发约 42s、恢复约 60s，均落在预测范围内。完整时间线证明恢复是降低负载后自然发生，未修改规则阈值。
+
+**瓶颈证据：** 600/s 时成功吞吐 **385.0/s**，相对预测 381/s 约高 1%；503 共 **25969** 次。稳定窗口的池平均占用 **3.91304/4**、平均在途 **603.609**，服务所绑核 busy 仅 **15.14%**，enrolld 进程消耗 **0.303517 核**，说明不用等 CPU 打满，池排队已破坏用户 SLO。对应 `overload-red.csv`、`overload-use.csv`。该窗口服务端 SLI 为 0，而 5xx 比例约 36.45%；大量慢成功同样消耗预算，只对 5xx 告警会漏掉这部分症状。
+
+服务端 p99 约 1989.69ms，客户端成功请求 p99 约 1012.40ms，差别主要包括直方图 `(1s,2s]` 宽桶插值、服务端包含全部状态码，以及 RED 查询使用截至阶段结束时刻、长度为阶段时长减 5s 的窗口，而客户端统计整段；不能把两者当同一测量值。原始 `*-metrics.txt`、阶段 CSV 与 `dashboard-data.json` 可交叉核对。
+
+**三行九格与讲义的映射：**
+
+| 层 | 第 1 格 | 第 2 格 | 第 3 格 |
+|---|---|---|---|
+| 业务：是否完成 | 读请求达标率、1m/5m 燃烧率（替代端到端完成率） | 读成功率与提交成功率；无提交明确显示无数据 | 在线人数未埋点；仅用主机 TCP/conntrack 作连接侧核对，不当人数 |
+| 服务 RED：谁在等 | 按接口 QPS、5xx 错误率 | 按接口 p50/p99，同图展示 | inflight、连接池占用、池等待 p99 |
+| 资源 USE：在等什么 | CPU busy、运行队列、steal、可用内存 | vda 写 await、忙碌比例、aqu-sz | eth0/lo 发送速率、监听队列溢出速率 |
+
+完整可复制查询逐条列在 [O3-queries.md](docs/O3-queries.md)，页面各格也可展开。讲义的完整业务完成率、真实在线人数以及 MySQL/Kafka 指标在 enrolld 中不存在，已明确标注，不造数据。磁盘和网络是主机级共享计数；读压测走回环，不能用 eth0 曲线推算这次读请求带宽。唯一症状告警为读 SLO 燃烧率，原因类指标只进入看板。
+
+**验证与留存：** `promtool check config` 和 8 组规则测试通过，见 [validation/promtool.txt](runs/o3-alert/validation/promtool.txt)；规则健康与恢复后 targets 见 `rules-after.json`、`targets-after.json`。归档保存所有九格查询的原始范围响应、可离线交互的单文件 HTML、firing 截图及 SHA256 清单；TSDB 丢失后仍可审阅本次数据。没有改动 enrolld 业务实现，也没有删除必做实验数据。
 
 ## 8. 成员分工
 

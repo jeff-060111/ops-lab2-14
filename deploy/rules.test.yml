@@ -1,0 +1,142 @@
+---
+rule_files:
+- rules.yml
+evaluation_interval: 5s
+tests:
+- name: healthy traffic
+  interval: 5s
+  input_series:
+  - series: up{job="enrolld",instance="127.0.0.1:8080"}
+    values: 1+0x120
+  - series: http_request_duration_seconds_count{job="enrolld",route="/api/courses/{id}",code="200"}
+    values: 0+100x120
+  - series: http_request_duration_seconds_bucket{job="enrolld",route="/api/courses/{id}",code="200",le="0.05"}
+    values: 0+100x120
+  alert_rule_test:
+  - eval_time: 30s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+  - eval_time: 40s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+- name: slow successful requests burn budget
+  interval: 5s
+  input_series:
+  - series: up{job="enrolld",instance="127.0.0.1:8080"}
+    values: 1+0x120
+  - series: http_request_duration_seconds_count{job="enrolld",route="/api/courses/{id}",code="200"}
+    values: 0+100x120
+  - series: http_request_duration_seconds_bucket{job="enrolld",route="/api/courses/{id}",code="200",le="0.05"}
+    values: 0+0x120
+  alert_rule_test:
+  - eval_time: 30s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+  - eval_time: 40s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts:
+    - exp_labels:
+        job: enrolld
+        severity: warning
+        service: enrolld
+        route: "/api/courses/{id}"
+      exp_annotations:
+        summary: enrolld 读路径 SLO 错误预算燃烧过快
+        description: 99% 的读请求应成功且在 50ms 内完成；1m 和 5m 燃烧率均超过 14.4 持续 30s，当前 5m 燃烧率为
+          100.00。先查 RED，再查连接池等待和 CPU。
+- name: all 503 and no successful series still fires
+  interval: 5s
+  input_series:
+  - series: up{job="enrolld",instance="127.0.0.1:8080"}
+    values: 1+0x120
+  - series: http_request_duration_seconds_count{job="enrolld",route="/api/courses/{id}",code="503"}
+    values: 0+100x120
+  alert_rule_test:
+  - eval_time: 30s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+  - eval_time: 40s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts:
+    - exp_labels:
+        job: enrolld
+        severity: warning
+        service: enrolld
+        route: "/api/courses/{id}"
+      exp_annotations:
+        summary: enrolld 读路径 SLO 错误预算燃烧过快
+        description: 99% 的读请求应成功且在 50ms 内完成；1m 和 5m 燃烧率均超过 14.4 持续 30s，当前 5m 燃烧率为
+          100.00。先查 RED，再查连接池等待和 CPU。
+- name: zero traffic does not fire
+  interval: 5s
+  input_series:
+  - series: up{job="enrolld",instance="127.0.0.1:8080"}
+    values: 1+0x120
+  - series: http_request_duration_seconds_count{job="enrolld",route="/api/courses/{id}",code="200"}
+    values: 0+0x120
+  - series: http_request_duration_seconds_bucket{job="enrolld",route="/api/courses/{id}",code="200",le="0.05"}
+    values: 0+0x120
+  alert_rule_test:
+  - eval_time: 30s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+  - eval_time: 40s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+- name: missing target does not fire
+  interval: 5s
+  input_series: []
+  alert_rule_test:
+  - eval_time: 30s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+  - eval_time: 40s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+- name: failed scrape is not a latency burn alert
+  interval: 5s
+  input_series:
+  - series: up{job="enrolld"}
+    values: 0+0x120
+  - series: http_request_duration_seconds_count{job="enrolld",route="/api/courses/{id}",code="503"}
+    values: 0+100x120
+  alert_rule_test:
+  - eval_time: 30s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+  - eval_time: 40s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+- name: low traffic guard
+  interval: 5s
+  input_series:
+  - series: up{job="enrolld",instance="127.0.0.1:8080"}
+    values: 1+0x120
+  - series: http_request_duration_seconds_count{job="enrolld",route="/api/courses/{id}",code="503"}
+    values: 0+1x120
+  alert_rule_test:
+  - eval_time: 30s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+  - eval_time: 40s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+- name: brief spike is filtered
+  interval: 5s
+  input_series:
+  - series: up{job="enrolld",instance="127.0.0.1:8080"}
+    values: 1+0x120
+  - series: http_request_duration_seconds_count{job="enrolld",route="/api/courses/{id}",code="200"}
+    values: 0+100x120
+  - series: http_request_duration_seconds_bucket{job="enrolld",route="/api/courses/{id}",code="200",le="0.05"}
+    values: 0+100x60 6000+0x1 6100+100x57
+  alert_rule_test:
+  - eval_time: 5m30s
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+  - eval_time: 6m
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
+  - eval_time: 7m
+    alertname: EnrolldReadSLOBurnRateHigh
+    exp_alerts: []
