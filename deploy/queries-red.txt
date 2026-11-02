@@ -37,3 +37,12 @@ goroutines_max      max_over_time(go_goroutines{job="enrolld"}[${window}])
 
 # ---- 任务 1：服务端看到的 SLI = 成功（code="200"）且耗时不超过 ${slo} 秒的请求 ÷ 全部请求（L-08 第 19 页）----
 server_slo_good   sum(rate(http_request_duration_seconds_bucket{route="${route}",code="200",le="${slo}"}[${window}])) / sum(rate(http_request_duration_seconds_count{route="${route}"}[${window}]))
+
+# ---- O1：内存与 GC ----
+# ${window} 为阶段时长减去开头 5 秒；60 秒阶段使用末 55 秒。
+# increase() 是窗口增量的外推估计；GC CPU 时间单位为秒，不是请求延迟。
+gc_cycles_inc    increase(go_gc_cycles_total{job="enrolld"}[${window}])
+gc_cpu_inc_s     increase(go_gc_cpu_seconds_total{job="enrolld"}[${window}])
+# RSS 单位为 MiB；最大值是抓取样本的最大值，不代表连续时间内的真实峰值。
+rss_avg_mib      avg_over_time(process_resident_memory_bytes{job="enrolld"}[${window}]) / 1048576
+rss_max_mib      max_over_time(process_resident_memory_bytes{job="enrolld"}[${window}]) / 1048576

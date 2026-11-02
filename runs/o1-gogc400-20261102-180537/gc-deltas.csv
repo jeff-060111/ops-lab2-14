@@ -1,0 +1,3 @@
+metric,start,end,delta,unit
+go_gc_cycles_total,0,1009,1009,cycles
+go_gc_cpu_seconds_total,0,0.458056462,0.458056462,cpu_seconds_estimate
